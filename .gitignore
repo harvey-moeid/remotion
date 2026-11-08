@@ -1,0 +1,6 @@
+node_modules
+out
+props.json
+.wrangler
+.dev.vars
+*.log
