@@ -1,0 +1,26 @@
+name = 'remotion-api'
+main = 'src/index.ts'
+compatibility_date = '2025-09-01'
+workers_dev = true
+
+[vars]
+GH_OWNER = 'harvey-moeid'
+GH_REPO = 'remotion'
+GH_REF = 'main'
+WORKFLOW_FILE = 'render.yml'
+ALLOWED_ORIGINS = 'https://remotion-studio.pages.dev,http://localhost:8788'
+MAX_RENDERS_PER_DAY = '50'
+RETENTION_DAYS = '7'
+
+[[kv_namespaces]]
+binding = 'JOBS'
+id = 'cbb8dcbea2004c379ff65b37a36089f2'
+
+[[r2_buckets]]
+binding = 'RENDERS'
+bucket_name = 'remotion-renders'
+
+[triggers]
+crons = ['0 3 * * *']
+
+# Secret (diisi oleh deploy.yml dari GitHub Actions secrets): UPLOAD_TOKEN, DISPATCH_TOKEN
