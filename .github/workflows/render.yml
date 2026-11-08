@@ -1,0 +1,93 @@
+name: render
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobId:
+        description: ID job (UUID) dari Worker
+        required: true
+        type: string
+      template:
+        description: ID komposisi Remotion
+        required: true
+        type: string
+      props:
+        description: Props komposisi dalam JSON
+        required: false
+        default: '{}'
+        type: string
+      ratio:
+        description: Rasio video (9:16 atau 16:9)
+        required: false
+        default: '9:16'
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  API_URL: https://remotion-api.harveymoeid.workers.dev
+  JOB_ID: ${{ inputs.jobId }}
+  TEMPLATE: ${{ inputs.template }}
+  RATIO: ${{ inputs.ratio }}
+  PROPS_JSON: ${{ inputs.props }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
+    defaults:
+      run:
+        working-directory: remotion
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validasi input
+        run: |
+          [[ "$JOB_ID" =~ ^[0-9a-f-]{36}$ ]] || { echo '::error::jobId tidak valid'; exit 1; }
+          [[ "$TEMPLATE" =~ ^[A-Za-z0-9_-]{1,40}$ ]] || { echo '::error::template tidak valid'; exit 1; }
+          [ -n "$UPLOAD_TOKEN" ] || { echo '::error::secret UPLOAD_TOKEN belum diisi'; exit 1; }
+
+      - name: Lapor status rendering
+        run: |
+          curl -sS -X POST "$API_URL/api/jobs/$JOB_ID/status" \
+            -H "Authorization: Bearer $UPLOAD_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d '{"status":"rendering","runUrl":"'"$RUN_URL"'"}' || true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pasang library sistem untuk Chrome headless
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends libnss3 libdbus-1-3 libatk1.0-0 libasound2t64 libxrandr2 libxkbcommon-dev libxfixes3 libxcomposite1 libxdamage1 libgbm-dev libcups2 fonts-liberation fonts-noto-color-emoji
+
+      - name: Pasang dependensi
+        run: npm install --no-audit --no-fund
+
+      - name: Siapkan props
+        run: node scripts/prepare-props.mjs
+
+      - name: Render video
+        run: npx remotion render src/index.ts "$TEMPLATE" out/video.mp4 --props=props.json --codec=h264 --log=info
+
+      - name: Unggah MP4 ke Worker (R2)
+        run: |
+          ls -lh out/video.mp4
+          curl -fsS --retry 3 --retry-delay 5 --retry-all-errors -X PUT "$API_URL/upload?jobId=$JOB_ID" \
+            -H "Authorization: Bearer $UPLOAD_TOKEN" \
+            -H 'Content-Type: video/mp4' \
+            --data-binary @out/video.mp4
+
+      - name: Lapor gagal
+        if: failure()
+        run: |
+          curl -sS -X POST "$API_URL/api/jobs/$JOB_ID/status" \
+            -H "Authorization: Bearer $UPLOAD_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d '{"status":"failed","message":"Render gagal, lihat log GitHub Actions","runUrl":"'"$RUN_URL"'"}' || true

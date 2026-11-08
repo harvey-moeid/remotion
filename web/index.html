@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang='id'>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Remotion Studio</title>
+  <link rel='stylesheet' href='styles.css'>
+</head>
+<body>
+  <header>
+    <h1>Remotion Studio</h1>
+    <p>Buat video motion dari template. Dirender di GitHub Actions, disimpan di Cloudflare R2.</p>
+  </header>
+  <main>
+    <section class='panel'>
+      <h2>1. Pilih template</h2>
+      <div id='templates' class='cards'></div>
+    </section>
+
+    <section class='panel'>
+      <h2>2. Isi konten</h2>
+      <div class='row'>
+        <span class='label'>Rasio</span>
+        <div class='seg' id='ratio'>
+          <button type='button' data-ratio='9:16' class='active'>9:16 (TikTok)</button>
+          <button type='button' data-ratio='16:9'>16:9 (YouTube)</button>
+        </div>
+      </div>
+      <div class='split'>
+        <div id='form' class='form'></div>
+        <div class='preview-wrap'>
+          <div id='preview' class='preview'><span id='preview-text'></span></div>
+          <small>Pratinjau kasar; hasil akhir dirender oleh Remotion.</small>
+        </div>
+      </div>
+    </section>
+
+    <section class='panel'>
+      <h2>3. Render</h2>
+      <button id='render' class='primary' type='button'>Render video</button>
+      <ol id='steps' class='steps' hidden>
+        <li>Antre</li>
+        <li>Merender</li>
+        <li>Selesai</li>
+      </ol>
+      <p id='message' class='message'></p>
+      <div id='result'></div>
+    </section>
+
+    <section class='panel'>
+      <h2>Riwayat</h2>
+      <ul id='history' class='history'></ul>
+    </section>
+  </main>
+  <script type='module' src='app.js'></script>
+</body>
+</html>
