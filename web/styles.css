@@ -8,6 +8,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0;
   background: var(--bg);
@@ -56,3 +57,16 @@ video.wide { width: 100%; max-width: 720px; }
 .download { color: #111; background: var(--accent); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; }
 .history { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .history button { background: none; border: 0; color: var(--text); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; text-align: left; }
+
+/* ---------- template Kode kustom ---------- */
+.custom { display: grid; gap: 12px; }
+textarea.code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; min-height: 320px; resize: vertical; white-space: pre; tab-size: 2; overflow: auto; }
+textarea.code.dropping { border-color: var(--accent); }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font: inherit; }
+.btn:hover { border-color: var(--accent); }
+.counter { color: var(--muted); font-size: 13px; margin-left: auto; }
+.counter.over { color: #e08f8f; font-weight: 600; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+.hint code { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--text); }
+.warn { background: #3a2f12; border: 1px solid #6b5a2f; color: #f0d9a0; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 0; }

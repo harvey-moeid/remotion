@@ -1,11 +1,13 @@
 import {API_BASE} from './config.js';
-import {TEMPLATES} from './templates.js';
+import {CUSTOM_EXAMPLE, TEMPLATES} from './templates.js';
 
 const $ = (selector) => document.querySelector(selector);
 const HISTORY_KEY = 'remotion.history';
+const ACCESS_KEY = 'remotion.accessCode';
 const STEPS = ['queued', 'rendering', 'done'];
 const POLL_MS = 4000;
 const GIVE_UP_MS = 20 * 60 * 1000;
+const MAX_CODE_CHARS = 100000;
 
 const state = {template: TEMPLATES[0], ratio: '9:16', values: {}, timer: null};
 
@@ -17,6 +19,7 @@ function el(tag, props = {}, children = []) {
 
 function buildProps() {
   const t = state.template;
+  if (t.custom) return {};
   if (t.toProps) return t.toProps(state.values);
   const props = {};
   for (const f of t.fields) {
@@ -48,6 +51,8 @@ function renderTemplates() {
 function selectTemplate(t) {
   state.template = t;
   state.values = Object.fromEntries(t.fields.map((f) => [f.key, f.default]));
+  $('#builtin').hidden = Boolean(t.custom);
+  $('#custom').hidden = !t.custom;
   renderTemplates();
   renderForm();
   updatePreview();
@@ -77,6 +82,7 @@ function renderForm() {
 }
 
 function updatePreview() {
+  if (state.template.custom) return;
   const box = $('#preview');
   const v = state.values;
   box.style.aspectRatio = state.ratio === '16:9' ? '16 / 9' : '9 / 16';
@@ -95,6 +101,65 @@ document.querySelectorAll('#ratio button').forEach((button) => {
     updatePreview();
   };
 });
+
+/* ---------- editor kode (template Kode kustom) ---------- */
+
+function updateCounter() {
+  const n = $('#code').value.length;
+  const counter = $('#counter');
+  counter.textContent = `${n.toLocaleString('id-ID')} / ${MAX_CODE_CHARS.toLocaleString('id-ID')} karakter`;
+  counter.classList.toggle('over', n > MAX_CODE_CHARS);
+}
+
+async function loadFile(file) {
+  if (!file) return;
+  try {
+    $('#code').value = await file.text();
+    updateCounter();
+    showMessage(`File ${file.name} dimuat.`);
+  } catch {
+    showMessage('File tidak bisa dibaca.');
+  }
+}
+
+$('#code').oninput = updateCounter;
+$('#pick').onclick = () => $('#file').click();
+$('#file').onchange = (event) => {
+  loadFile(event.target.files[0]);
+  event.target.value = '';
+};
+$('#example').onclick = () => {
+  $('#code').value = CUSTOM_EXAMPLE;
+  updateCounter();
+};
+$('#clear').onclick = () => {
+  $('#code').value = '';
+  updateCounter();
+};
+$('#code').ondragover = (event) => {
+  event.preventDefault();
+  event.currentTarget.classList.add('dropping');
+};
+$('#code').ondragleave = (event) => event.currentTarget.classList.remove('dropping');
+$('#code').ondrop = (event) => {
+  event.preventDefault();
+  event.currentTarget.classList.remove('dropping');
+  loadFile(event.dataTransfer.files[0]);
+};
+
+try {
+  $('#accessCode').value = sessionStorage.getItem(ACCESS_KEY) || '';
+} catch {
+  /* storage tidak tersedia: abaikan */
+}
+$('#accessCode').oninput = (event) => {
+  try {
+    sessionStorage.setItem(ACCESS_KEY, event.target.value);
+  } catch {
+    /* abaikan */
+  }
+};
+updateCounter();
 
 /* ---------- render & polling ---------- */
 
@@ -178,13 +243,25 @@ function track(jobId) {
 
 async function startRender() {
   const button = $('#render');
+  const body = {template: state.template.id, ratio: state.ratio, props: buildProps()};
+
+  if (state.template.custom) {
+    const code = $('#code').value;
+    const accessCode = $('#accessCode').value;
+    if (!code.trim()) return showMessage('Tempel atau unggah kode dulu.');
+    if (code.length > MAX_CODE_CHARS) return showMessage('Kode terlalu panjang (maks 100.000 karakter).');
+    if (!accessCode) return showMessage('Isi kode akses dulu.');
+    body.code = code;
+    body.accessCode = accessCode;
+  }
+
   button.disabled = true;
   clearResult();
   try {
     const res = await fetch(`${API_BASE}/api/render`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({template: state.template.id, ratio: state.ratio, props: buildProps()}),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

@@ -21,6 +21,7 @@ env:
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
   DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+  ACCESS_CODE: ${{ secrets.ACCESS_CODE }}
 
 jobs:
   worker:
@@ -36,6 +37,7 @@ jobs:
             if [ -z "${!v}" ]; then echo "::error::Secret $v belum diisi"; missing=1; fi
           done
           [ "$missing" = 0 ] || exit 1
+          if [ -z "$ACCESS_CODE" ]; then echo '::warning::Secret ACCESS_CODE belum diisi: template Kode kustom dinonaktifkan'; fi
 
       - uses: actions/setup-node@v4
         with:
@@ -54,6 +56,7 @@ jobs:
         run: |
           printf '%s' "$UPLOAD_TOKEN" | npx wrangler secret put UPLOAD_TOKEN
           printf '%s' "$DISPATCH_TOKEN" | npx wrangler secret put DISPATCH_TOKEN
+          if [ -n "$ACCESS_CODE" ]; then printf '%s' "$ACCESS_CODE" | npx wrangler secret put ACCESS_CODE; fi
 
   pages:
     runs-on: ubuntu-latest
