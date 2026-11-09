@@ -1,5 +1,7 @@
 import {API_BASE} from './config.js';
 import {CUSTOM_EXAMPLE, TEMPLATES} from './templates.js';
+import {createEditor} from './editor.js';
+import {MAX_CODE_CHARS, checkBuiltin, checkCode} from './code-check.js';
 
 const $ = (selector) => document.querySelector(selector);
 const HISTORY_KEY = 'remotion.history';
@@ -7,7 +9,8 @@ const ACCESS_KEY = 'remotion.accessCode';
 const STEPS = ['queued', 'rendering', 'done'];
 const POLL_MS = 4000;
 const GIVE_UP_MS = 20 * 60 * 1000;
-const MAX_CODE_CHARS = 100000;
+const CHECK_DELAY_MS = 300;
+const MAX_ISSUES_SHOWN = 30;
 
 // Status akhir tidak akan berubah lagi, jadi tidak perlu di-polling ulang.
 const TERMINAL = ['done', 'failed', 'cancelled', 'expired'];
@@ -117,6 +120,8 @@ document.querySelectorAll('#ratio button').forEach((button) => {
 
 /* ---------- editor kode (template Kode kustom) ---------- */
 
+let checkTimer = null;
+
 function updateCounter() {
   const n = $('#code').value.length;
   const counter = $('#counter');
@@ -124,39 +129,89 @@ function updateCounter() {
   counter.classList.toggle('over', n > MAX_CODE_CHARS);
 }
 
+// Pengecekan kode (code-check.js): hasilnya dipakai untuk tanda di gutter editor dan daftar di bawahnya.
+function renderCheck(result) {
+  const box = $('#check');
+  if (!$('#code').value.trim()) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  const {errors, warnings} = result;
+  const summary = $('#check-summary');
+  summary.className = 'check-summary ' + (errors.length ? 'bad' : warnings.length ? 'warn' : 'ok');
+  summary.textContent = errors.length
+    ? `${errors.length} error, ${warnings.length} peringatan`
+    : warnings.length
+      ? `Lolos, ${warnings.length} peringatan`
+      : 'Lolos pengecekan dasar';
+
+  const list = $('#check-list');
+  list.replaceChildren();
+  for (const issue of result.issues.slice(0, MAX_ISSUES_SHOWN)) {
+    list.append(
+      el('li', {className: issue.level}, [
+        el('button', {
+          type: 'button',
+          className: 'jump',
+          textContent: `Baris ${issue.line}`,
+          onclick: () => editor.goToLine(issue.line, issue.col),
+        }),
+        ` ${issue.message}`,
+      ]),
+    );
+  }
+}
+
+function runCheck() {
+  clearTimeout(checkTimer);
+  const result = checkCode($('#code').value);
+  editor.setIssues(result.issues);
+  renderCheck(result);
+  return result;
+}
+
+// Dipanggil setiap pengguna mengetik: hitung karakter segera, pengecekan ditunda sebentar (debounce).
+function afterEdit() {
+  updateCounter();
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(runCheck, CHECK_DELAY_MS);
+}
+
+const editor = createEditor($('#code'), {onInput: afterEdit});
+
+// Ubah isi editor lewat kode (unggah file, contoh, kosongkan): event input tidak terpicu, jadi gambar ulang manual.
+function setCode(text) {
+  $('#code').value = text;
+  editor.refresh();
+  afterEdit();
+}
+
 async function loadFile(file) {
   if (!file) return;
   try {
-    $('#code').value = await file.text();
-    updateCounter();
+    setCode(await file.text());
     showMessage(`File ${file.name} dimuat.`);
   } catch {
     showMessage('File tidak bisa dibaca.');
   }
 }
 
-$('#code').oninput = updateCounter;
 $('#pick').onclick = () => $('#file').click();
 $('#file').onchange = (event) => {
   loadFile(event.target.files[0]);
   event.target.value = '';
 };
-$('#example').onclick = () => {
-  $('#code').value = CUSTOM_EXAMPLE;
-  updateCounter();
-};
-$('#clear').onclick = () => {
-  $('#code').value = '';
-  updateCounter();
-};
+$('#example').onclick = () => setCode(CUSTOM_EXAMPLE);
+$('#clear').onclick = () => setCode('');
 $('#code').ondragover = (event) => {
   event.preventDefault();
-  event.currentTarget.classList.add('dropping');
+  editor.root.classList.add('dropping');
 };
-$('#code').ondragleave = (event) => event.currentTarget.classList.remove('dropping');
+$('#code').ondragleave = () => editor.root.classList.remove('dropping');
 $('#code').ondrop = (event) => {
   event.preventDefault();
-  event.currentTarget.classList.remove('dropping');
+  editor.root.classList.remove('dropping');
   loadFile(event.dataTransfer.files[0]);
 };
 
@@ -312,10 +367,21 @@ async function startRender() {
     const code = $('#code').value;
     const accessCode = $('#accessCode').value;
     if (!code.trim()) return showMessage('Tempel atau unggah kode dulu.');
-    if (code.length > MAX_CODE_CHARS) return showMessage('Kode terlalu panjang (maks 100.000 karakter).');
+    // Pengecekan dasar: error memblokir render (hemat 2-4 menit GitHub Actions); peringatan tidak.
+    const result = runCheck();
+    if (result.errors.length > 0) {
+      const first = result.errors[0];
+      editor.goToLine(first.line, first.col);
+      return showMessage(
+        `Perbaiki ${result.errors.length} error dulu sebelum render (pertama: baris ${first.line}, ${first.message})`,
+      );
+    }
     if (!accessCode) return showMessage('Isi kode akses dulu.');
     body.code = code;
     body.accessCode = accessCode;
+  } else {
+    const errors = checkBuiltin(state.template, state.values, body.props).filter((i) => i.level === 'error');
+    if (errors.length > 0) return showMessage(errors.map((i) => i.message).join(' '));
   }
 
   button.disabled = true;

@@ -45,13 +45,37 @@ Catatan: `DISPATCH_TOKEN` sudah punya izin **Actions: Read and write**, cukup un
 | `GET /files/:id.mp4` | publik | Sajikan MP4 (Range, `?download=1`) |
 | `GET /thumbs/:id.jpg` | publik | Sajikan thumbnail |
 
+## Editor kode dan pengecekan sebelum render
+
+Template **Kode kustom** memakai editor buatan sendiri (tanpa dependensi, tanpa CDN, tanpa build step; `web/` tetap statis murni).
+
+| File | Peran |
+| --- | --- |
+| `web/lexer.js` | Lexer ringan TS/TSX (komentar, string, template, regex, angka, keyword, tag JSX). Bukan parser penuh. Dipakai bersama oleh editor dan pengecekan |
+| `web/editor.js` | Editor: `<textarea>` transparan di atas `<pre>` berwarna + gutter nomor baris. Tab/Shift+Tab (indentasi, juga multi-baris), Enter mempertahankan indentasi, Esc lalu Tab untuk keluar (aksesibilitas) |
+| `web/code-check.js` | `checkCode()` untuk kode kustom dan `checkBuiltin()` untuk form template bawaan |
+
+**Cara kerja editor.** Pengguna mengetik di textarea (caret, seleksi, undo, IME, dan mobile tetap bawaan browser); warna datang dari `<pre>` di bawahnya dengan font/padding identik. Satu kontainer (`.ed-scroll`) yang digulir, jadi gutter dan pewarnaan tidak perlu disinkronkan lewat JS (gutter `position: sticky`). Konstanta `LINE_H`, `PAD_Y`, `PAD_X` di `editor.js` harus sama dengan CSS `.ed-*` di `styles.css`. Tanpa JS / bila editor gagal dimuat, textarea tetap bisa dipakai biasa.
+
+**Pengecekan dasar (di browser, sebelum render).** Berjalan otomatis 300 ms setelah berhenti mengetik dan tepat saat tombol Render ditekan. Nomor baris bermasalah diberi warna di gutter, daftar isu di bawah editor bisa diklik untuk melompat ke baris.
+
+| Level | Pengecekan |
+| --- | --- |
+| error (memblokir render) | kode kosong; lebih dari 100.000 karakter; tidak ada / lebih dari satu `export default`; kurung `() [] {}` tidak seimbang; komentar `/* */` atau template literal yang tidak ditutup; impor selain `react` / `remotion` atau impor relatif |
+| warn | `Math.random()`, `Date.now()`, `new Date()`, `setTimeout`/`setInterval`/`requestAnimationFrame`, `fetch` (tidak deterministik / tidak sinkron dengan frame); nilai `config` di luar batas (1-1800 frame, 1-60 fps, 16-3840 px); JSX tanpa `import React`; string yang tidak ditutup |
+| info | `useCurrentFrame()` tidak dipakai (video statis) |
+
+Untuk template bawaan, `checkBuiltin()` memblokir render bila angka di luar rentang, warna tidak valid, konten (judul / slide pertama) kosong, atau props melebihi 20.000 karakter; lebih dari 12 slide hanya jadi peringatan.
+
+**Batasan.** Pengecekan bersifat heuristik dan tidak menggantikan compiler: kode yang lolos masih bisa gagal di Remotion (tipe, runtime). Sebaliknya, lexer bisa salah membaca teks JSX tertentu (mis. apostrof atau `/` di dalam teks), sehingga warna kadang meleset; karena itu string tak tertutup hanya peringatan, bukan error. Batas 100.000 karakter dan keharusan `export default` juga dicek ulang oleh Worker (`worker/src/index.ts`).
+
 ## Struktur
 
 | Folder | Isi |
 | --- | --- |
 | `remotion/` | Komposisi Remotion (`KineticTitle`, `TikTokSlides`), 1080x1920 dan 1920x1080 |
 | `worker/` | Cloudflare Worker (Hono): API, upload, penyajian MP4 + thumbnail, pembatalan, cron pembersihan |
-| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages |
+| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `editor.js`, `lexer.js`, `code-check.js`, `templates.js` |
 | `.github/workflows/` | `render.yml` (render video + thumbnail) dan `deploy.yml` (deploy Worker + Pages) |
 
 ## Secret yang wajib diisi
@@ -74,7 +98,7 @@ GitHub repo > Settings > Secrets and variables > Actions > New repository secret
 3. Tambahkan entri di `web/templates.js`: `id` (sama dengan id komposisi), `fields`, `preview`, dan opsional `toProps`.
 4. Push ke `main`. Pages ikut ter-deploy otomatis; render berikutnya langsung memakai komposisi baru.
 
-Worker tidak perlu diubah (hanya memvalidasi format id template). Thumbnail otomatis dibuat dari frame 30 komposisi; pastikan ada konten terlihat di sekitar detik pertama.
+Worker tidak perlu diubah (hanya memvalidasi format id template). Thumbnail otomatis dibuat dari frame 30 komposisi; pastikan ada konten terlihat di sekitar detik pertama. `checkBuiltin()` ikut mengecek field baru (angka dalam `min`/`max`, warna `#rrggbb`) dan memakai `preview()` untuk mendeteksi konten kosong.
 
 ## Pengembangan lokal
 
@@ -85,7 +109,7 @@ cd worker && npm install && npx wrangler dev   # Worker lokal (butuh .dev.vars)
 
 ## Batas free tier yang perlu diwaspadai
 
-- **GitHub Actions**: repo private dapat 2.000 menit/bulan (Linux). Satu render 5-10 detik makan sekitar 2-4 menit, jadi kira-kira 500-1.000 render/bulan. Repo public tidak dibatasi menit. Thumbnail menambah beberapa detik per render.
+- **GitHub Actions**: repo private dapat 2.000 menit/bulan (Linux). Satu render 5-10 detik makan sekitar 2-4 menit, jadi kira-kira 500-1.000 render/bulan. Repo public tidak dibatasi menit. Thumbnail menambah beberapa detik per render. Pengecekan di browser mencegah menit terbuang untuk kode yang pasti gagal.
 - **Workers Free**: 100.000 request/hari, CPU 10 ms/request, body request maks 100 MB (upload dibatasi 90 MB).
 - **KV Free**: 1.000 write/hari. Satu render memakai sekitar 5-6 write (thumbnail menambah satu, pembatalan satu), jadi batas praktis sekitar 170 render/hari. Worker membatasi `MAX_RENDERS_PER_DAY` (default 50).
 - **R2 Free**: 10 GB penyimpanan, 1 juta operasi kelas A dan 10 juta kelas B per bulan. Cron harian menghapus MP4 dan thumbnail yang lebih tua dari `RETENTION_DAYS` (default 7 hari).

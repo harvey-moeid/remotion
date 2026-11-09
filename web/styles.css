@@ -77,8 +77,8 @@ video.wide { width: 100%; max-width: 720px; }
 
 /* ---------- template Kode kustom ---------- */
 .custom { display: grid; gap: 12px; }
+/* Cadangan bila editor.js gagal dimuat: textarea biasa. */
 textarea.code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; min-height: 320px; resize: vertical; white-space: pre; tab-size: 2; overflow: auto; }
-textarea.code.dropping { border-color: var(--accent); }
 .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .btn { display: inline-block; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font: inherit; text-decoration: none; }
 .btn:hover { border-color: var(--accent); }
@@ -89,3 +89,46 @@ textarea.code.dropping { border-color: var(--accent); }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 .hint code { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--text); }
 .warn { background: #3a2f12; border: 1px solid #6b5a2f; color: #f0d9a0; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 0; }
+
+/* ---------- editor kode (web/editor.js) ---------- */
+/* PENTING: font, line-height, dan padding .ed-hl dan .ed-input harus identik (juga dengan LINE_H/PAD_* di editor.js),
+   kalau tidak, warna dan caret tidak sejajar. */
+.ed { position: relative; display: flex; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden; }
+.ed.dropping { border-color: var(--accent); }
+.ed:focus-within { border-color: var(--accent); }
+.ed-scroll { flex: 1; min-width: 0; min-height: 320px; max-height: 560px; overflow: auto; display: flex; resize: vertical; }
+.ed-gutter, .ed-hl, .ed .ed-input { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; tab-size: 2; letter-spacing: normal; }
+.ed-gutter { position: sticky; left: 0; z-index: 2; flex: none; padding: 10px 8px 10px 10px; text-align: right; color: var(--muted); background: #121826; border-right: 1px solid var(--line); user-select: none; }
+.ed-gutter .ln { display: block; padding: 0 2px; border-radius: 3px; }
+.ed-gutter .ln.error { color: #ffb3b3; background: #5a2323; cursor: help; }
+.ed-gutter .ln.warn { color: #f0d9a0; background: #4a3d15; cursor: help; }
+.ed-gutter .ln.info { color: var(--accent); }
+.ed-body { position: relative; flex: 1 0 auto; }
+.ed-hl { margin: 0; padding: 10px 12px; white-space: pre; color: var(--text); pointer-events: none; }
+.ed-hl code { font: inherit; }
+.ed .ed-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 10px 12px; border: 0; border-radius: 0; background: transparent; color: transparent; caret-color: var(--text); resize: none; overflow: hidden; white-space: pre; outline: none; min-height: 0; }
+.ed .ed-input::placeholder { color: var(--muted); }
+.ed .ed-input::selection { background: rgba(255, 212, 0, .28); color: transparent; }
+.tk-comment { color: #6c7a96; font-style: italic; }
+.tk-string, .tk-template { color: #9ad49a; }
+.tk-number { color: #f5a97f; }
+.tk-keyword { color: #c792ea; }
+.tk-literal { color: #f78c6c; }
+.tk-func { color: #82aaff; }
+.tk-class { color: #ffcb6b; }
+.tk-regex { color: #89ddff; }
+.tk-tag { color: #ff6b8b; }
+
+/* ---------- hasil pengecekan kode ---------- */
+.check { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); font-size: 13px; }
+.check-summary { font-weight: 600; }
+.check-summary.ok { color: #8fe0b0; }
+.check-summary.warn { color: #f0d9a0; }
+.check-summary.bad { color: #e08f8f; }
+.check-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
+.check-list:empty { display: none; }
+.check-list li { padding-left: 8px; border-left: 3px solid var(--line); color: var(--muted); }
+.check-list li.error { border-left-color: #e08f8f; color: var(--text); }
+.check-list li.warn { border-left-color: #f0d9a0; }
+.check-list li.info { border-left-color: var(--accent); }
+.check-list .jump { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--accent); text-decoration: underline; cursor: pointer; }
