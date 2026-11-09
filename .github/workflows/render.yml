@@ -33,25 +33,31 @@ env:
   PROPS_JSON: ${{ inputs.props }}
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+# UPLOAD_TOKEN sengaja HANYA diberikan ke langkah yang memerlukannya (bukan ke seluruh job),
+# supaya kode kustom yang dijalankan saat render tidak bisa membaca token tersebut.
 jobs:
   render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    env:
-      UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
     defaults:
       run:
         working-directory: remotion
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Validasi input
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
         run: |
           [[ "$JOB_ID" =~ ^[0-9a-f-]{36}$ ]] || { echo '::error::jobId tidak valid'; exit 1; }
           [[ "$TEMPLATE" =~ ^[A-Za-z0-9_-]{1,40}$ ]] || { echo '::error::template tidak valid'; exit 1; }
           [ -n "$UPLOAD_TOKEN" ] || { echo '::error::secret UPLOAD_TOKEN belum diisi'; exit 1; }
 
       - name: Lapor status rendering
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
         run: |
           curl -sS -X POST "$API_URL/api/jobs/$JOB_ID/status" \
             -H "Authorization: Bearer $UPLOAD_TOKEN" \
@@ -73,10 +79,23 @@ jobs:
       - name: Siapkan props
         run: node scripts/prepare-props.mjs
 
+      - name: Ambil kode kustom dari Worker
+        if: inputs.template == 'CustomCode'
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
+        run: |
+          curl -fsS --retry 3 --retry-delay 3 "$API_URL/api/jobs/$JOB_ID/code" \
+            -H "Authorization: Bearer $UPLOAD_TOKEN" \
+            -o src/custom/UserCode.tsx
+          test -s src/custom/UserCode.tsx || { echo '::error::kode kustom kosong'; exit 1; }
+          echo "Kode kustom: $(wc -c < src/custom/UserCode.tsx) byte"
+
       - name: Render video
         run: npx remotion render src/index.ts "$TEMPLATE" out/video.mp4 --props=props.json --codec=h264 --log=info
 
       - name: Unggah MP4 ke Worker (R2)
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
         run: |
           ls -lh out/video.mp4
           curl -fsS --retry 3 --retry-delay 5 --retry-all-errors -X PUT "$API_URL/upload?jobId=$JOB_ID" \
@@ -86,6 +105,8 @@ jobs:
 
       - name: Lapor gagal
         if: failure()
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
         run: |
           curl -sS -X POST "$API_URL/api/jobs/$JOB_ID/status" \
             -H "Authorization: Bearer $UPLOAD_TOKEN" \
