@@ -6,6 +6,7 @@ type Bindings = {
   RENDERS: R2Bucket;
   UPLOAD_TOKEN: string;
   DISPATCH_TOKEN: string;
+  ACCESS_CODE?: string;
   GH_OWNER: string;
   GH_REPO: string;
   GH_REF: string;
@@ -37,6 +38,11 @@ const MAX_PROPS_CHARS = 20_000;
 const MAX_UPLOAD_BYTES = 90 * 1024 * 1024;
 const JOB_TTL_SECONDS = 7 * 24 * 3600;
 
+// Template kode kustom: kode pengguna disimpan sementara di KV, lalu diambil oleh GitHub Actions.
+const CUSTOM_TEMPLATE = 'CustomCode';
+const MAX_CODE_CHARS = 100_000;
+const CODE_TTL_SECONDS = 24 * 3600;
+
 const app = new Hono<{Bindings: Bindings}>();
 
 // CORS: hanya origin yang terdaftar di ALLOWED_ORIGINS.
@@ -59,6 +65,7 @@ app.use('*', async (c, next) => {
 });
 
 const objectKey = (id: string) => `renders/${id}.mp4`;
+const codeKey = (id: string) => `code:${id}`;
 const nowIso = () => new Date().toISOString();
 
 async function getJob(env: Bindings, id: string): Promise<Job | null> {
@@ -71,20 +78,24 @@ async function saveJob(env: Bindings, job: Job): Promise<Job> {
   return next;
 }
 
-// Bandingkan token lewat hash SHA-256 agar waktu pembandingan konstan.
-async function authorized(c: Ctx): Promise<boolean> {
-  const header = c.req.header('authorization') ?? '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const expected = c.env.UPLOAD_TOKEN ?? '';
-  if (!token || !expected) {
+// Bandingkan dua string lewat hash SHA-256 agar waktu pembandingan konstan.
+async function safeEqual(a: string, b: string): Promise<boolean> {
+  if (!a || !b) {
     return false;
   }
   const enc = new TextEncoder();
-  const [a, b] = await Promise.all([
-    crypto.subtle.digest('SHA-256', enc.encode(token)),
-    crypto.subtle.digest('SHA-256', enc.encode(expected)),
+  const [x, y] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
   ]);
-  return crypto.subtle.timingSafeEqual(a, b);
+  return crypto.subtle.timingSafeEqual(x, y);
+}
+
+// Token Bearer dari GitHub Actions (UPLOAD_TOKEN).
+async function authorized(c: Ctx): Promise<boolean> {
+  const header = c.req.header('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  return safeEqual(token, c.env.UPLOAD_TOKEN ?? '');
 }
 
 app.get('/', (c) => c.json({name: 'remotion-api', ok: true}));
@@ -95,6 +106,8 @@ app.post('/api/render', async (c) => {
     template?: unknown;
     ratio?: unknown;
     props?: unknown;
+    code?: unknown;
+    accessCode?: unknown;
   } | null;
 
   if (!body || typeof body.template !== 'string' || !TEMPLATE_RE.test(body.template)) {
@@ -111,6 +124,27 @@ app.post('/api/render', async (c) => {
   const propsJson = JSON.stringify(props);
   if (propsJson.length > MAX_PROPS_CHARS) {
     return c.json({error: 'props terlalu besar'}, 413);
+  }
+
+  // Kode kustom = eksekusi kode di GitHub Actions, jadi wajib kode akses (fail-closed bila belum diset).
+  let code: string | undefined;
+  if (body.template === CUSTOM_TEMPLATE) {
+    if (!c.env.ACCESS_CODE) {
+      return c.json({error: 'Fitur kode kustom belum aktif (secret ACCESS_CODE belum diisi)'}, 403);
+    }
+    if (typeof body.accessCode !== 'string' || !(await safeEqual(body.accessCode, c.env.ACCESS_CODE))) {
+      return c.json({error: 'Kode akses salah'}, 401);
+    }
+    if (typeof body.code !== 'string' || body.code.trim() === '') {
+      return c.json({error: 'kode kosong'}, 400);
+    }
+    if (body.code.length > MAX_CODE_CHARS) {
+      return c.json({error: 'kode terlalu panjang (maks 100.000 karakter)'}, 413);
+    }
+    if (!/export\s+default\b/.test(body.code)) {
+      return c.json({error: 'kode harus punya export default (komponen React)'}, 400);
+    }
+    code = body.code;
   }
 
   const limit = Number(c.env.MAX_RENDERS_PER_DAY || 50);
@@ -130,6 +164,9 @@ app.post('/api/render', async (c) => {
     createdAt,
     updatedAt: createdAt,
   });
+  if (code !== undefined) {
+    await c.env.JOBS.put(codeKey(id), code, {expirationTtl: CODE_TTL_SECONDS});
+  }
 
   const dispatchUrl = `https://api.github.com/repos/${c.env.GH_OWNER}/${c.env.GH_REPO}/actions/workflows/${c.env.WORKFLOW_FILE}/dispatches`;
   const res = await fetch(dispatchUrl, {
@@ -150,6 +187,9 @@ app.post('/api/render', async (c) => {
   if (!res.ok) {
     const detail = (await res.text()).slice(0, 300);
     console.error('dispatch gagal', res.status, detail);
+    if (code !== undefined) {
+      await c.env.JOBS.delete(codeKey(id));
+    }
     job = await saveJob(c.env, {
       ...job,
       status: 'failed',
@@ -174,6 +214,22 @@ app.get('/api/jobs/:id', async (c) => {
   }
   const origin = new URL(c.req.url).origin;
   return c.json({...job, videoUrl: job.status === 'done' ? `${origin}/files/${job.id}.mp4` : null});
+});
+
+// 2b) GitHub Actions mengambil kode kustom milik job (dilindungi token).
+app.get('/api/jobs/:id/code', async (c) => {
+  if (!(await authorized(c))) {
+    return c.json({error: 'unauthorized'}, 401);
+  }
+  const id = c.req.param('id');
+  if (!UUID_RE.test(id)) {
+    return c.json({error: 'id tidak valid'}, 400);
+  }
+  const code = await c.env.JOBS.get(codeKey(id));
+  if (code === null) {
+    return c.json({error: 'kode tidak ditemukan'}, 404);
+  }
+  return c.text(code);
 });
 
 // 3) GitHub Actions melaporkan status (rendering / failed).
