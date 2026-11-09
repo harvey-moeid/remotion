@@ -17,7 +17,8 @@ type Bindings = {
 };
 
 type Ctx = Context<{Bindings: Bindings}>;
-type JobStatus = 'queued' | 'rendering' | 'done' | 'failed';
+// 'cancelled' = dibatalkan pengguna lewat POST /api/jobs/:id/cancel (status akhir, sama seperti done/failed).
+type JobStatus = 'queued' | 'rendering' | 'done' | 'failed' | 'cancelled';
 
 type Job = {
   id: string;
@@ -29,6 +30,8 @@ type Job = {
   message?: string;
   runUrl?: string;
   size?: number;
+  // true bila thumbnail JPEG sudah diunggah ke R2 (thumbs/<id>.jpg).
+  thumb?: boolean;
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -36,6 +39,7 @@ const TEMPLATE_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const RATIOS = ['9:16', '16:9'];
 const MAX_PROPS_CHARS = 20_000;
 const MAX_UPLOAD_BYTES = 90 * 1024 * 1024;
+const MAX_THUMB_BYTES = 2 * 1024 * 1024;
 const JOB_TTL_SECONDS = 7 * 24 * 3600;
 
 // Template kode kustom: kode pengguna disimpan sementara di KV, lalu diambil oleh GitHub Actions.
@@ -65,6 +69,7 @@ app.use('*', async (c, next) => {
 });
 
 const objectKey = (id: string) => `renders/${id}.mp4`;
+const thumbKey = (id: string) => `thumbs/${id}.jpg`;
 const codeKey = (id: string) => `code:${id}`;
 const nowIso = () => new Date().toISOString();
 
@@ -213,7 +218,54 @@ app.get('/api/jobs/:id', async (c) => {
     return c.json({error: 'job tidak ditemukan'}, 404);
   }
   const origin = new URL(c.req.url).origin;
-  return c.json({...job, videoUrl: job.status === 'done' ? `${origin}/files/${job.id}.mp4` : null});
+  return c.json({
+    ...job,
+    videoUrl: job.status === 'done' ? `${origin}/files/${job.id}.mp4` : null,
+    // Thumbnail tersedia begitu diunggah (bisa lebih dulu dari video).
+    thumbUrl: job.thumb ? `${origin}/thumbs/${job.id}.jpg` : null,
+  });
+});
+
+// 2a) UI membatalkan render yang masih antre/berjalan.
+// Urutan penting: tandai 'cancelled' di KV DULU (supaya /upload menolak hasil render yang terlambat),
+// baru minta GitHub menghentikan run. Bila run belum melapor (masih antre), workflow akan
+// mendapat HTTP 409 saat melapor status dan berhenti sendiri.
+app.post('/api/jobs/:id/cancel', async (c) => {
+  const id = c.req.param('id');
+  if (!UUID_RE.test(id)) {
+    return c.json({error: 'id tidak valid'}, 400);
+  }
+  const job = await getJob(c.env, id);
+  if (!job) {
+    return c.json({error: 'job tidak ditemukan'}, 404);
+  }
+  if (job.status !== 'queued' && job.status !== 'rendering') {
+    return c.json({error: `job sudah ${job.status}, tidak bisa dibatalkan`, status: job.status}, 409);
+  }
+
+  const saved = await saveJob(c.env, {...job, status: 'cancelled', message: 'Dibatalkan oleh pengguna'});
+  await c.env.JOBS.delete(codeKey(id));
+
+  const runId = /\/actions\/runs\/(\d+)/.exec(job.runUrl ?? '')?.[1];
+  if (runId) {
+    const res = await fetch(
+      `https://api.github.com/repos/${c.env.GH_OWNER}/${c.env.GH_REPO}/actions/runs/${runId}/cancel`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${c.env.DISPATCH_TOKEN}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'remotion-api-worker',
+        },
+      },
+    );
+    // Gagal membatalkan run bukan masalah fatal: job sudah 'cancelled', hasil upload akan ditolak.
+    if (!res.ok) {
+      console.error('cancel run gagal', res.status, (await res.text()).slice(0, 300));
+    }
+  }
+  return c.json(saved);
 });
 
 // 2b) GitHub Actions mengambil kode kustom milik job (dilindungi token).
@@ -256,6 +308,10 @@ app.post('/api/jobs/:id/status', async (c) => {
   if (job.status === 'done') {
     return c.json(job);
   }
+  // 409 = sinyal ke workflow bahwa job sudah dibatalkan dan run harus berhenti.
+  if (job.status === 'cancelled') {
+    return c.json(job, 409);
+  }
   const runUrl =
     typeof body.runUrl === 'string' && body.runUrl.startsWith('https://github.com/')
       ? body.runUrl
@@ -277,6 +333,9 @@ app.on(['POST', 'PUT'], '/upload', async (c) => {
   if (!job) {
     return c.json({error: 'job tidak ditemukan'}, 404);
   }
+  if (job.status === 'cancelled') {
+    return c.json({error: 'job dibatalkan'}, 409);
+  }
   const length = Number(c.req.header('content-length') ?? 0);
   if (!length || !c.req.raw.body) {
     return c.json({error: 'body kosong atau Content-Length tidak ada'}, 411);
@@ -288,8 +347,41 @@ app.on(['POST', 'PUT'], '/upload', async (c) => {
   await c.env.RENDERS.put(objectKey(jobId), c.req.raw.body, {
     httpMetadata: {contentType: 'video/mp4'},
   });
-  await saveJob(c.env, {...job, status: 'done', size: length, message: undefined});
+  // Baca ulang job: thumbnail mungkin baru saja menambah field `thumb`.
+  const fresh = (await getJob(c.env, jobId)) ?? job;
+  await saveJob(c.env, {...fresh, status: 'done', size: length, message: undefined});
   return c.json({ok: true, url: `/files/${jobId}.mp4`, size: length});
+});
+
+// 4b) GitHub Actions mengunggah thumbnail JPEG (dilindungi token) -> thumbs/<id>.jpg di R2.
+app.on(['POST', 'PUT'], '/upload-thumb', async (c) => {
+  if (!(await authorized(c))) {
+    return c.json({error: 'unauthorized'}, 401);
+  }
+  const jobId = c.req.query('jobId') ?? '';
+  if (!UUID_RE.test(jobId)) {
+    return c.json({error: 'jobId tidak valid'}, 400);
+  }
+  const job = await getJob(c.env, jobId);
+  if (!job) {
+    return c.json({error: 'job tidak ditemukan'}, 404);
+  }
+  if (job.status === 'cancelled') {
+    return c.json({error: 'job dibatalkan'}, 409);
+  }
+  const length = Number(c.req.header('content-length') ?? 0);
+  if (!length || !c.req.raw.body) {
+    return c.json({error: 'body kosong atau Content-Length tidak ada'}, 411);
+  }
+  if (length > MAX_THUMB_BYTES) {
+    return c.json({error: 'thumbnail terlalu besar (maks 2 MB)'}, 413);
+  }
+
+  await c.env.RENDERS.put(thumbKey(jobId), c.req.raw.body, {
+    httpMetadata: {contentType: 'image/jpeg'},
+  });
+  await saveJob(c.env, {...job, thumb: true});
+  return c.json({ok: true, url: `/thumbs/${jobId}.jpg`, size: length});
 });
 
 // 5) Sajikan MP4 dari R2 (mendukung Range agar bisa di-seek di pemutar).
@@ -350,25 +442,46 @@ app.get('/files/:name', async (c) => {
   return new Response(obj.body, {headers});
 });
 
+// 5b) Sajikan thumbnail JPEG dari R2.
+app.get('/thumbs/:name', async (c) => {
+  const match = /^([0-9a-f-]{36})[.]jpg$/.exec(c.req.param('name'));
+  if (!match || !UUID_RE.test(match[1])) {
+    return c.json({error: 'tidak ditemukan'}, 404);
+  }
+  const obj = await c.env.RENDERS.get(thumbKey(match[1]));
+  if (!obj) {
+    return c.json({error: 'tidak ditemukan'}, 404);
+  }
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'public, max-age=3600',
+      ETag: obj.httpEtag,
+    },
+  });
+});
+
 app.notFound((c) => c.json({error: 'tidak ditemukan'}, 404));
 app.onError((err, c) => {
   console.error('error tak tertangani', err);
   return c.json({error: 'kesalahan internal'}, 500);
 });
 
-// Cron harian: hapus MP4 yang melewati masa simpan agar R2 tetap di bawah kuota gratis.
+// Cron harian: hapus MP4 dan thumbnail yang melewati masa simpan agar R2 tetap di bawah kuota gratis.
 async function cleanup(env: Bindings): Promise<void> {
   const days = Number(env.RETENTION_DAYS || 7);
   const cutoff = Date.now() - days * 24 * 3600 * 1000;
-  let cursor: string | undefined;
-  do {
-    const list = await env.RENDERS.list({prefix: 'renders/', cursor, limit: 500});
-    const old = list.objects.filter((o) => o.uploaded.getTime() < cutoff).map((o) => o.key);
-    if (old.length > 0) {
-      await env.RENDERS.delete(old);
-    }
-    cursor = list.truncated ? list.cursor : undefined;
-  } while (cursor);
+  for (const prefix of ['renders/', 'thumbs/']) {
+    let cursor: string | undefined;
+    do {
+      const list = await env.RENDERS.list({prefix, cursor, limit: 500});
+      const old = list.objects.filter((o) => o.uploaded.getTime() < cutoff).map((o) => o.key);
+      if (old.length > 0) {
+        await env.RENDERS.delete(old);
+      }
+      cursor = list.truncated ? list.cursor : undefined;
+    } while (cursor);
+  }
 }
 
 export default {
