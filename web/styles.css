@@ -55,16 +55,35 @@ video { max-width: 100%; border-radius: 10px; background: #000; }
 video.tall { max-height: 520px; }
 video.wide { width: 100%; max-width: 720px; }
 .download { color: #111; background: var(--accent); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-.history { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
-.history button { background: none; border: 0; color: var(--text); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; text-align: left; }
+
+/* ---------- tombol aksi render (Render + Batal) ---------- */
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.danger { background: transparent; color: #e08f8f; border: 1px solid #6b2f2f; border-radius: 10px; padding: 12px 22px; font: inherit; font-weight: 600; cursor: pointer; }
+.danger:hover { background: #3a1b1b; }
+.danger:disabled { opacity: .5; cursor: progress; }
+
+/* ---------- riwayat: thumbnail + status + aksi ---------- */
+.history { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.history li { display: flex; gap: 12px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+.history .open { background: none; border: 0; color: var(--text); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; text-align: left; }
+.history .info { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.history .meta { color: var(--muted); font-size: 13px; }
+.history .item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumb { width: 56px; height: 56px; flex: none; border-radius: 8px; object-fit: cover; background: #000; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+.badge { display: inline-block; padding: 0 8px; border-radius: 99px; border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.badge.done { background: #1f3a2b; border-color: #2f6b49; color: #8fe0b0; }
+.badge.failed, .badge.cancelled { border-color: #6b2f2f; color: #e08f8f; }
+.badge.queued, .badge.rendering { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- template Kode kustom ---------- */
 .custom { display: grid; gap: 12px; }
 textarea.code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; min-height: 320px; resize: vertical; white-space: pre; tab-size: 2; overflow: auto; }
 textarea.code.dropping { border-color: var(--accent); }
 .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.btn { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font: inherit; }
+.btn { display: inline-block; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; font: inherit; text-decoration: none; }
 .btn:hover { border-color: var(--accent); }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+.btn.small.cancel { color: #e08f8f; border-color: #6b2f2f; }
 .counter { color: var(--muted); font-size: 13px; margin-left: auto; }
 .counter.over { color: #e08f8f; font-weight: 600; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }

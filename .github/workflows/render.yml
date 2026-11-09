@@ -55,14 +55,20 @@ jobs:
           [[ "$TEMPLATE" =~ ^[A-Za-z0-9_-]{1,40}$ ]] || { echo '::error::template tidak valid'; exit 1; }
           [ -n "$UPLOAD_TOKEN" ] || { echo '::error::secret UPLOAD_TOKEN belum diisi'; exit 1; }
 
+      # Worker membalas HTTP 409 bila job sudah dibatalkan pengguna saat masih antre;
+      # run langsung dihentikan agar tidak membuang menit GitHub Actions.
       - name: Lapor status rendering
         env:
           UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
         run: |
-          curl -sS -X POST "$API_URL/api/jobs/$JOB_ID/status" \
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$API_URL/api/jobs/$JOB_ID/status" \
             -H "Authorization: Bearer $UPLOAD_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d '{"status":"rendering","runUrl":"'"$RUN_URL"'"}' || true
+            -d '{"status":"rendering","runUrl":"'"$RUN_URL"'"}' || echo 000)
+          if [ "$code" = "409" ]; then
+            echo '::notice::Job dibatalkan pengguna, run dihentikan'
+            exit 1
+          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -89,6 +95,30 @@ jobs:
             -o src/custom/UserCode.tsx
           test -s src/custom/UserCode.tsx || { echo '::error::kode kustom kosong'; exit 1; }
           echo "Kode kustom: $(wc -c < src/custom/UserCode.tsx) byte"
+
+      # Thumbnail = satu frame diam (detik ke-1, cadangan frame 0 untuk komposisi sangat pendek).
+      # Tidak fatal: bila gagal, render video tetap lanjut dan riwayat memakai placeholder.
+      # Langkah ini TIDAK menerima UPLOAD_TOKEN (sama seperti render video).
+      - name: Render thumbnail
+        id: thumb
+        continue-on-error: true
+        run: |
+          mkdir -p out
+          npx remotion still src/index.ts "$TEMPLATE" out/thumb.jpg --props=props.json --frame=30 --scale=0.4 --image-format=jpeg --log=error \
+            || npx remotion still src/index.ts "$TEMPLATE" out/thumb.jpg --props=props.json --frame=0 --scale=0.4 --image-format=jpeg --log=error
+          ls -lh out/thumb.jpg
+
+      # Diunggah SEBELUM video supaya thumbnail sudah ada ketika status berubah menjadi done.
+      - name: Unggah thumbnail ke Worker (R2)
+        if: steps.thumb.outcome == 'success'
+        continue-on-error: true
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
+        run: |
+          curl -fsS --retry 2 --retry-delay 3 --retry-all-errors -X PUT "$API_URL/upload-thumb?jobId=$JOB_ID" \
+            -H "Authorization: Bearer $UPLOAD_TOKEN" \
+            -H 'Content-Type: image/jpeg' \
+            --data-binary @out/thumb.jpg
 
       - name: Render video
         run: npx remotion render src/index.ts "$TEMPLATE" out/video.mp4 --props=props.json --codec=h264 --log=info

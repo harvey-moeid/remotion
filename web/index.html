@@ -62,7 +62,11 @@
 
     <section class='panel'>
       <h2>3. Render</h2>
-      <button id='render' class='primary' type='button'>Render video</button>
+      <div class='actions'>
+        <button id='render' class='primary' type='button'>Render video</button>
+        <!-- Muncul hanya saat job berstatus antre/merender; memanggil POST /api/jobs/:id/cancel -->
+        <button id='cancel' class='danger' type='button' hidden>Batal render</button>
+      </div>
       <ol id='steps' class='steps' hidden>
         <li>Antre</li>
         <li>Merender</li>

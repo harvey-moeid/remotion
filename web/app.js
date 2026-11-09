@@ -9,7 +9,20 @@ const POLL_MS = 4000;
 const GIVE_UP_MS = 20 * 60 * 1000;
 const MAX_CODE_CHARS = 100000;
 
-const state = {template: TEMPLATES[0], ratio: '9:16', values: {}, timer: null};
+// Status akhir tidak akan berubah lagi, jadi tidak perlu di-polling ulang.
+const TERMINAL = ['done', 'failed', 'cancelled', 'expired'];
+const IN_PROGRESS = ['queued', 'rendering'];
+const STATUS_LABEL = {
+  queued: 'Antre',
+  rendering: 'Merender',
+  done: 'Selesai',
+  failed: 'Gagal',
+  cancelled: 'Dibatalkan',
+  expired: 'Kedaluwarsa',
+};
+
+// jobs = cache status job per id (dipakai riwayat); currentId = job yang sedang dipantau di panel Render.
+const state = {template: TEMPLATES[0], ratio: '9:16', values: {}, timer: null, currentId: null, jobs: {}};
 
 function el(tag, props = {}, children = []) {
   const node = Object.assign(document.createElement(tag), props);
@@ -177,12 +190,17 @@ function setStatus(job) {
   document.querySelectorAll('#steps li').forEach((li, i) => {
     li.className = i < idx ? 'complete' : i === idx ? 'active' : '';
   });
-  $('#steps').classList.toggle('failed', job.status === 'failed');
+  $('#steps').classList.toggle('failed', job.status === 'failed' || job.status === 'cancelled');
+
+  // Tombol Batal hanya relevan selama job masih antre/merender.
+  $('#cancel').hidden = !IN_PROGRESS.includes(job.status);
+  $('#cancel').disabled = false;
 
   if (job.status === 'queued') showMessage('Menunggu runner GitHub Actions (biasanya 10-30 detik)...');
   if (job.status === 'rendering') showMessage('Sedang merender, biasanya 1-3 menit...', job.runUrl);
   if (job.status === 'done') showMessage('Video siap.');
   if (job.status === 'failed') showMessage(job.message || 'Render gagal.', job.runUrl);
+  if (job.status === 'cancelled') showMessage('Render dibatalkan.');
 }
 
 function clearResult() {
@@ -195,6 +213,8 @@ function showResult(job) {
     controls: true,
     playsInline: true,
     src: job.videoUrl,
+    // Thumbnail dipakai sebagai poster supaya pemutar tidak hitam sebelum diputar.
+    poster: job.thumbUrl || '',
     className: job.ratio === '16:9' ? 'wide' : 'tall',
   });
   const link = el('a', {className: 'download', href: `${job.videoUrl}?download=1`, textContent: 'Unduh MP4'});
@@ -209,25 +229,37 @@ function stopPolling() {
 function finish() {
   stopPolling();
   $('#render').disabled = false;
+  $('#cancel').hidden = true;
+}
+
+// Simpan status job ke cache; true bila ada perubahan yang perlu digambar ulang di riwayat.
+function rememberJob(job) {
+  const prev = state.jobs[job.id];
+  state.jobs[job.id] = job;
+  return !prev || prev.status !== job.status || prev.thumbUrl !== job.thumbUrl;
 }
 
 function track(jobId) {
   stopPolling();
   clearResult();
+  state.currentId = jobId;
   const startedAt = Date.now();
   const tick = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/jobs/${jobId}`);
       if (res.status === 404) {
         showMessage('Job tidak ditemukan (mungkin sudah kedaluwarsa).');
+        state.jobs[jobId] = {id: jobId, status: 'expired'};
+        renderHistory();
         return finish();
       }
       const job = await res.json();
       setStatus(job);
+      if (rememberJob(job)) renderHistory();
       if (job.status === 'done') {
         showResult(job);
         finish();
-      } else if (job.status === 'failed') {
+      } else if (job.status === 'failed' || job.status === 'cancelled') {
         finish();
       } else if (Date.now() - startedAt > GIVE_UP_MS) {
         showMessage('Waktu tunggu habis. Cek tab Actions di repo GitHub.');
@@ -240,6 +272,37 @@ function track(jobId) {
   tick();
   state.timer = setInterval(tick, POLL_MS);
 }
+
+// Batalkan job (dipakai tombol di panel Render dan di riwayat).
+// Worker menandai job 'cancelled' lalu menghentikan run GitHub Actions bila sudah berjalan.
+async function cancelJob(jobId) {
+  if (state.currentId === jobId) $('#cancel').disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/jobs/${jobId}/cancel`, {method: 'POST'});
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 409) {
+      // Sudah selesai/gagal/dibatalkan: tidak bisa dibatalkan, tampilkan status sebenarnya.
+      showMessage(data.error || 'Job tidak bisa dibatalkan.');
+      if (state.currentId === jobId) track(jobId);
+    } else if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    } else {
+      rememberJob(data);
+      if (state.currentId === jobId) {
+        setStatus(data);
+        finish();
+      }
+    }
+  } catch (error) {
+    showMessage(`Gagal membatalkan: ${error.message}`);
+    if (state.currentId === jobId) $('#cancel').disabled = false;
+  }
+  renderHistory();
+}
+
+$('#cancel').onclick = () => {
+  if (state.currentId) cancelJob(state.currentId);
+};
 
 async function startRender() {
   const button = $('#render');
@@ -265,6 +328,7 @@ async function startRender() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    state.jobs[data.jobId] = {id: data.jobId, status: 'queued'};
     saveHistory({id: data.jobId, template: state.template.name, ratio: state.ratio, at: Date.now()});
     setStatus({status: 'queued'});
     track(data.jobId);
@@ -296,6 +360,25 @@ function saveHistory(entry) {
   renderHistory();
 }
 
+// Ambil status terbaru semua item riwayat (thumbnail, selesai/gagal/batal).
+// Item berstatus akhir dilewati karena tidak akan berubah lagi.
+async function refreshHistory() {
+  await Promise.all(
+    loadHistory().map(async (item) => {
+      const known = state.jobs[item.id];
+      if (known && TERMINAL.includes(known.status)) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/${item.id}`);
+        if (res.status === 404) state.jobs[item.id] = {id: item.id, status: 'expired'};
+        else if (res.ok) state.jobs[item.id] = await res.json();
+      } catch {
+        /* offline: biarkan status lama */
+      }
+    }),
+  );
+  renderHistory();
+}
+
 function renderHistory() {
   const list = $('#history');
   list.replaceChildren();
@@ -305,21 +388,57 @@ function renderHistory() {
     return;
   }
   for (const item of items) {
-    const label = `${item.template} - ${item.ratio} - ${new Date(item.at).toLocaleString('id-ID')}`;
-    list.append(
-      el('li', {}, [
+    const job = state.jobs[item.id];
+    const status = job ? job.status : '';
+
+    // Thumbnail; job lama / belum ada thumbnail memakai kotak placeholder.
+    const thumb = job && job.thumbUrl
+      ? el('img', {className: 'thumb', src: job.thumbUrl, alt: `Thumbnail ${item.template}`, loading: 'lazy'})
+      : el('div', {className: 'thumb', textContent: status === 'done' ? 'MP4' : '...'});
+
+    const info = el('div', {className: 'info'}, [
+      el('button', {
+        type: 'button',
+        className: 'open',
+        textContent: `${item.template} - ${item.ratio}`,
+        onclick: () => {
+          $('#render').disabled = true;
+          track(item.id);
+        },
+      }),
+      el('span', {className: 'meta'}, [
+        new Date(item.at).toLocaleString('id-ID'),
+        ' ',
+        ...(status ? [el('span', {className: `badge ${status}`, textContent: STATUS_LABEL[status] || status})] : []),
+      ]),
+    ]);
+
+    const actions = el('div', {className: 'item-actions'});
+    if (status === 'done') {
+      // Unduh langsung: Content-Disposition dari ?download=1 memaksa simpan file.
+      actions.append(
+        el('a', {
+          className: 'btn small',
+          href: `${API_BASE}/files/${item.id}.mp4?download=1`,
+          textContent: 'Unduh',
+        }),
+      );
+    }
+    if (IN_PROGRESS.includes(status)) {
+      actions.append(
         el('button', {
           type: 'button',
-          textContent: label,
-          onclick: () => {
-            $('#render').disabled = true;
-            track(item.id);
-          },
+          className: 'btn small cancel',
+          textContent: 'Batal',
+          onclick: () => cancelJob(item.id),
         }),
-      ]),
-    );
+      );
+    }
+
+    list.append(el('li', {}, [thumb, info, actions]));
   }
 }
 
 selectTemplate(TEMPLATES[0]);
 renderHistory();
+refreshHistory();
