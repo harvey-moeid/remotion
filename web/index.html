@@ -39,6 +39,7 @@
         <p class='warn'>Kode dijalankan di GitHub Actions, jadi pakai hanya kode yang Anda percaya. Fitur ini membutuhkan kode akses.</p>
         <label class='field' for='code'>
           <span>Kode komposisi (TSX)</span>
+          <!-- Di-upgrade oleh web/editor.js menjadi editor dengan nomor baris + warna sintaks; tanpa JS tetap textarea biasa -->
           <textarea id='code' class='code' rows='16' spellcheck='false' autocapitalize='off' autocomplete='off' placeholder='Tempel kode di sini, atau seret file .tsx ke kotak ini'></textarea>
         </label>
         <div class='tools'>
@@ -48,10 +49,20 @@
           <button id='clear' class='btn' type='button'>Kosongkan</button>
           <span id='counter' class='counter'></span>
         </div>
+        <!-- Hasil pengecekan dasar (web/code-check.js); disembunyikan saat editor kosong -->
+        <div id='check' class='check' hidden>
+          <div id='check-summary' class='check-summary'></div>
+          <ul id='check-list' class='check-list'></ul>
+        </div>
         <p class='hint'>
           Wajib ada <code>export default</code> berupa komponen React. Opsional:
           <code>export const config = {durationInFrames, fps, width, height}</code>
           (bawaan 150 frame, 30 fps, ukuran mengikuti rasio). Hanya paket <code>remotion</code> dan <code>react</code> yang tersedia.
+        </p>
+        <p class='hint'>
+          Editor: <code>Tab</code> / <code>Shift+Tab</code> mengatur indentasi, <code>Enter</code> mempertahankan indentasi.
+          Tekan <code>Esc</code> lalu <code>Tab</code> untuk keluar dari editor dengan keyboard.
+          Error pada pengecekan memblokir render; peringatan tidak.
         </p>
         <label class='field' for='accessCode'>
           <span>Kode akses</span>
