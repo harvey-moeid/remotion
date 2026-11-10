@@ -266,6 +266,8 @@ function stopPolling() {
 function finish() {
   stopPolling();
   $('#render').disabled = false;
+  $('#render').removeAttribute('aria-busy');
+  $('#render').querySelector('span').textContent = 'Render video';
   $('#cancel').hidden = true;
 }
 
