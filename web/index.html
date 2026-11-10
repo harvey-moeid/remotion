@@ -1,102 +1,116 @@
 <!doctype html>
-<html lang='id'>
+<html lang="id">
 <head>
-  <meta charset='utf-8'>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>Remotion Studio</title>
-  <link rel='icon' type='image/png' sizes='32x32' href='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAYFBMVEWf9f6B7v2E2Pto0vdlve1QuPU/rf0/ofk4n/s5lt4tmPkjh/UrcL4fdeARb/IoWZwSVqUGU90DQsgNPH8IL4gFHWUFFT0AAyQAAgUBAgMCAgIAAQIAAAECAAAAAQAAAAAA6gC7AAAB80lEQVR42m2TjbaqIBCFERSRIX4FMfDw/m95R/J0qtterazmiz0DG9L+VPYDtbc3kb+P+9Fazvjc7/f9C1DaZkY2jKF/u/8HlBZHQhklxKgRqfIB5CNSOs98mhg5per9DchHvo0gxTw9xEi4+iDX+jkAgESii3O2tKM8gb3FiU4nIMWpeRYTM7kTpM8Xh2GahZS/hOBoMuZ76UA5tpnijzdl1y5rFSBCFC7dgWo5/vNmQkwpxVPBKDGzYUMTggZpnAHrRi2218OijLnxmYWWEcjNSuxPxbgsasX6quZljYoLbtGD4IgWNAKboiMdY1pxQ8c1WSHFA8gtaq0FAoMyZE2K2gW9rAAdu0Wt2TvgJ2AtsUkxy8iS0MLnWs8p6s/mJFqYgXULRilBnE/hGhMfSmoRt3ANakzYopA8PoEapYYFy2f9RIJZAG651OssSgvYJ8jHMQh8gdYutfJymmldvXdP+TVurb7koRzNaK97UWsPph1Xph5A3bMaQDM6cYYCGFTdXxO1tzBwpzkhmElCwU0kHi+JKkdeJukADxljyzk4yZYrlB3AzdSgvcVJUNiD18LV8pbJ6PxmH006bZP36a3Jnut2w7VjdDBBqfnz4hQMlgep04Yb5nL5+bw4DS231cdcol+3VuqXy/tdr0BB/b4/9Q8JAFLebvz+iAAAAABJRU5ErkJggg=='>
-  <link rel='stylesheet' href='styles.css'>
-  <link rel='stylesheet' href='brand.css'>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <meta name="description" content="Remotion Studio — buat video motion dari template atau kode React, lalu render otomatis.">
+  <title>Remotion Studio — Video Workspace</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAYFBMVEWf9f6B7v2E2Pto0vdlve1QuPU/rf0/ofk4n/s5lt4tmPkjh/UrcL4fdeARb/IoWZwSVqUGU90DQsgNPH8IL4gFHWUFFT0AAyQAAgUBAgMCAgIAAQIAAAECAAAAAQAAAAAA6gC7AAAB80lEQVR42m2TjbaqIBCFERSRIX4FMfDw/m95R/J0qtterazmiz0DG9L+VPYDtbc3kb+P+9Fazvjc7/f9C1DaZkY2jKF/u/8HlBZHQhklxKgRqfIB5CNSOs98mhg5per9DchHvo0gxTw9xEi4+iDX+jkAgESii3O2tKM8gb3FiU4nIMWpeRYTM7kTpM8Xh2GahZS/hOBoMuZ76UA5tpnijzdl1y5rFSBCFC7dgWo5/vNmQkwpxVPBKDGzYUMTggZpnAHrRi2218OijLnxmYWWEcjNSuxPxbgsasX6quZljYoLbtGD4IgWNAKboiMdY1pxQ8c1WSHFA8gtaq0FAoMyZE2K2gW9rAAdu0Wt2TvgJ2AtsUkxy8iS0MLnWs8p6s/mJFqYgXULRilBnE/hGhMfSmoRt3ANakzYopA8PoEapYYFy2f9RIJZAG651OssSgvYJ8jHMQh8gdYutfJymmldvXdP+TVurb7koRzNaK97UWsPph1Xph5A3bMaQDM6cYYCGFTdXxO1tzBwpzkhmElCwU0kHi+JKkdeJukADxljyzk4yZYrlB3AzdSgvcVJUNiD18LV8pbJ6PxmH006bZP36a3Jnut2w7VjdDBBqfnz4hQMlgep04Yb5nL5+bw4DS231cdcol+3VuqXy/tdr0BB/b4/9Q8JAFLebvz+iAAAAABJRU5ErkJggg==">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="brand.css">
 </head>
 <body>
-  <header>
-    <div class='brand'>
-      <span class='brand-logo' role='img' aria-label='Logo Byga'></span>
-      <h1>Remotion Studio</h1>
-    </div>
-    <p>Buat video motion dari template atau dari kode Anda sendiri. Dirender di GitHub Actions, disimpan di Cloudflare R2.</p>
-  </header>
-  <main>
-    <section class='panel'>
-      <h2>1. Pilih template</h2>
-      <div id='templates' class='cards'></div>
-    </section>
-
-    <section class='panel'>
-      <h2>2. Isi konten</h2>
-      <div class='row'>
-        <span class='label'>Rasio</span>
-        <div class='seg' id='ratio'>
-          <button type='button' data-ratio='9:16' class='active'>9:16 (TikTok)</button>
-          <button type='button' data-ratio='16:9'>16:9 (YouTube)</button>
-        </div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Remotion Studio beranda">
+        <span class="brand-logo" role="img" aria-label="Logo Byga"></span>
+        <span class="brand-copy"><strong>Remotion <em>Studio</em></strong><small>CREATIVE WORKSPACE</small></span>
+      </a>
+      <div class="topbar-right">
+        <span class="system-status"><i></i> Render engine ready</span>
+        <a class="top-link" href="https://github.com/harvey-moeid/remotion" target="_blank" rel="noopener">Repository <span aria-hidden="true">↗</span></a>
       </div>
+    </header>
 
-      <div id='builtin' class='split'>
-        <div id='form' class='form'></div>
-        <div class='preview-wrap'>
-          <div id='preview' class='preview'><span id='preview-text'></span></div>
-          <small>Pratinjau kasar; hasil akhir dirender oleh Remotion.</small>
+    <main>
+      <section class="welcome">
+        <div>
+          <div class="eyebrow"><span class="eyebrow-line"></span> VIDEO PRODUCTION WORKSPACE</div>
+          <h1>Turn ideas into <span>motion.</span></h1>
+          <p>Rancang visual, atur komposisi, dan render video dalam satu ruang kerja.</p>
         </div>
-      </div>
+        <div class="welcome-mark" aria-hidden="true"><span>R</span><i></i><b></b></div>
+      </section>
 
-      <div id='custom' class='custom' hidden>
-        <p class='warn'>Kode dijalankan di GitHub Actions, jadi pakai hanya kode yang Anda percaya. Fitur ini membutuhkan kode akses.</p>
-        <label class='field' for='code'>
-          <span>Kode komposisi (TSX)</span>
-          <!-- Di-upgrade oleh web/editor.js menjadi editor dengan nomor baris + warna sintaks; tanpa JS tetap textarea biasa -->
-          <textarea id='code' class='code' rows='16' spellcheck='false' autocapitalize='off' autocomplete='off' placeholder='Tempel kode di sini, atau seret file .tsx ke kotak ini'></textarea>
-        </label>
-        <div class='tools'>
-          <button id='pick' class='btn' type='button'>Unggah file</button>
-          <input id='file' type='file' accept='.tsx,.ts,.jsx,.js,.txt' hidden>
-          <button id='example' class='btn' type='button'>Isi contoh</button>
-          <button id='clear' class='btn' type='button'>Kosongkan</button>
-          <span id='counter' class='counter'></span>
+      <section class="workflow">
+        <div class="workflow-heading">
+          <div><span class="section-kicker">01 / START CREATING</span><h2>Pilih titik awal</h2></div>
+          <span class="subtle-note">Pilih template untuk mulai menyusun video</span>
         </div>
-        <!-- Hasil pengecekan dasar (web/code-check.js); disembunyikan saat editor kosong -->
-        <div id='check' class='check' hidden>
-          <div id='check-summary' class='check-summary'></div>
-          <ul id='check-list' class='check-list'></ul>
+        <div id="templates" class="template-grid" aria-label="Pilihan template"></div>
+      </section>
+
+      <section class="workspace panel">
+        <div class="panel-heading">
+          <div><span class="section-kicker">02 / COMPOSITION</span><h2>Atur konten video</h2></div>
+          <div class="ratio-control">
+            <span class="control-caption">ASPECT RATIO</span>
+            <div class="seg" id="ratio" role="group" aria-label="Rasio video">
+              <button type="button" data-ratio="9:16" class="active" aria-pressed="true"><span class="ratio-icon portrait"></span>9:16 <small>Shorts</small></button>
+              <button type="button" data-ratio="16:9" aria-pressed="false"><span class="ratio-icon landscape"></span>16:9 <small>Wide</small></button>
+            </div>
+          </div>
         </div>
-        <p class='hint'>
-          Wajib ada <code>export default</code> berupa komponen React. Opsional:
-          <code>export const config = {durationInFrames, fps, width, height}</code>
-          (bawaan 150 frame, 30 fps, ukuran mengikuti rasio). Hanya paket <code>remotion</code> dan <code>react</code> yang tersedia.
-        </p>
-        <p class='hint'>
-          Editor: <code>Tab</code> / <code>Shift+Tab</code> mengatur indentasi, <code>Enter</code> mempertahankan indentasi.
-          Tekan <code>Esc</code> lalu <code>Tab</code> untuk keluar dari editor dengan keyboard.
-          Error pada pengecekan memblokir render; peringatan tidak.
-        </p>
-        <label class='field' for='accessCode'>
-          <span>Kode akses</span>
-          <input id='accessCode' type='password' autocomplete='off'>
-        </label>
-      </div>
-    </section>
 
-    <section class='panel'>
-      <h2>3. Render</h2>
-      <div class='actions'>
-        <button id='render' class='primary' type='button'>Render video</button>
-        <!-- Muncul hanya saat job berstatus antre/merender; memanggil POST /api/jobs/:id/cancel -->
-        <button id='cancel' class='danger' type='button' hidden>Batal render</button>
-      </div>
-      <ol id='steps' class='steps' hidden>
-        <li>Antre</li>
-        <li>Merender</li>
-        <li>Selesai</li>
-      </ol>
-      <p id='message' class='message'></p>
-      <div id='result'></div>
-    </section>
+        <div id="builtin" class="composition-grid">
+          <div class="settings-column">
+            <div class="column-heading"><span class="mini-icon">✳</span><div><strong>Pengaturan komposisi</strong><small>Sesuaikan detail visual Anda</small></div></div>
+            <div id="form" class="form"></div>
+          </div>
+          <div class="preview-column">
+            <div class="column-heading preview-heading"><div><strong>Live preview</strong><small>Pratinjau komposisi</small></div><span class="live-dot">PREVIEW</span></div>
+            <div class="preview-stage">
+              <div id="preview" class="preview"><span id="preview-text"></span><span class="preview-watermark">REMOTION STUDIO</span></div>
+            </div>
+            <p class="preview-footnote"><span>ⓘ</span> Pratinjau kasar. Hasil akhir dirender oleh Remotion.</p>
+          </div>
+        </div>
 
-    <section class='panel'>
-      <h2>Riwayat</h2>
-      <ul id='history' class='history'></ul>
-    </section>
-  </main>
-  <script type='module' src='app.js'></script>
+        <div id="custom" class="custom" hidden>
+          <div class="custom-intro"><div><span class="section-kicker">CUSTOM COMPOSITION</span><h3>Build with code</h3><p>Gunakan komponen React dan API Remotion untuk membuat animasi sendiri.</p></div><span class="code-pill">TSX EDITOR</span></div>
+          <p class="warn"><strong>Perhatian keamanan</strong> Kode dijalankan di GitHub Actions. Gunakan hanya kode yang Anda percaya. Fitur ini membutuhkan kode akses.</p>
+          <label class="field code-field" for="code">
+            <span>Kode komposisi <small>React / TSX</small></span>
+            <textarea id="code" class="code" rows="16" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Tempel kode di sini, atau seret file .tsx ke kotak ini"></textarea>
+          </label>
+          <div class="tools">
+            <button id="pick" class="btn" type="button">＋ Unggah file</button>
+            <input id="file" type="file" accept=".tsx,.ts,.jsx,.js,.txt" hidden>
+            <button id="example" class="btn" type="button">Muat contoh</button>
+            <button id="clear" class="btn" type="button">Kosongkan</button>
+            <span id="counter" class="counter"></span>
+          </div>
+          <div id="check" class="check" hidden><div id="check-summary" class="check-summary"></div><ul id="check-list" class="check-list"></ul></div>
+          <div class="editor-hints">
+            <p class="hint">Wajib ada <code>export default</code> berupa komponen React. Opsional: <code>export const config = {durationInFrames, fps, width, height}</code>. Bawaan 150 frame, 30 fps, ukuran mengikuti rasio.</p>
+            <p class="hint">Editor mendukung Tab / Shift+Tab untuk indentasi dan Enter untuk mempertahankan indentasi. Tekan Esc lalu Tab untuk keluar dari editor dengan keyboard.</p>
+          </div>
+          <label class="field access-field" for="accessCode"><span>Kode akses</span><input id="accessCode" type="password" autocomplete="off" placeholder="Masukkan kode akses"></label>
+        </div>
+      </section>
+
+      <section class="render-section panel">
+        <div class="render-copy"><span class="section-kicker">03 / EXPORT</span><h2>Render your video</h2><p>Video akan diproses melalui GitHub Actions dan disimpan dengan aman.</p></div>
+        <div class="render-controls">
+          <div class="actions"><button id="render" class="primary" type="button"><span>Render video</span><b aria-hidden="true">↗</b></button><button id="cancel" class="danger" type="button" hidden>Batal render</button></div>
+          <p class="render-note"><span class="secure-icon">◇</span> Automated cloud rendering</p>
+        </div>
+        <ol id="steps" class="steps" hidden><li>Antre</li><li>Merender</li><li>Selesai</li></ol>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+        <div id="result"></div>
+      </section>
+
+      <section class="history-section">
+        <div class="history-heading"><div><span class="section-kicker">YOUR PROJECTS</span><h2>Riwayat render</h2><p>Video yang pernah Anda proses di browser ini.</p></div><span class="history-count">LOCAL HISTORY</span></div>
+        <ul id="history" class="history"></ul>
+      </section>
+    </main>
+    <footer><span>REMOTION STUDIO</span><span>Designed for ideas in motion · Powered by Remotion</span></footer>
+  </div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
