@@ -8,7 +8,7 @@ GH_OWNER = 'harvey-moeid'
 GH_REPO = 'remotion'
 GH_REF = 'main'
 WORKFLOW_FILE = 'render.yml'
-ALLOWED_ORIGINS = 'https://remotion-studio.pages.dev,http://localhost:8788'
+ALLOWED_ORIGINS = 'https://remotion-studio.pages.dev,http://localhost:8788,http://remotion.muidsoft.com'
 MAX_RENDERS_PER_DAY = '50'
 RETENTION_DAYS = '7'
 
