@@ -1,0 +1,30 @@
+{
+  "id": "./",
+  "name": "Byga — Remotion Studio",
+  "short_name": "Byga",
+  "description": "Buat video motion dari template atau kode React, lalu render otomatis.",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#090d16",
+  "categories": ["multimedia", "productivity", "utilities"],
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {
+      "name": "Prompt Library",
+      "short_name": "Prompt",
+      "description": "Buka daftar master prompt",
+      "url": "./#prompt-library-title",
+      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    }
+  ]
+}

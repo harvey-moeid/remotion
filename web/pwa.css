@@ -1,0 +1,51 @@
+/* PWA: toast (versi baru / offline / petunjuk pasang) dan tombol "Pasang aplikasi".
+   Memakai variabel desain dari styles.css (--surface-2, --line-strong, --text, --accent). */
+.pwa-toasts {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 1000;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  pointer-events: none;
+}
+.pwa-toast {
+  pointer-events: auto;
+  width: fit-content;
+  max-width: min(520px, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  color: var(--text);
+  background: rgba(20, 30, 46, .97);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .4);
+  font-size: 13px;
+  line-height: 1.45;
+  animation: pwa-in .22s ease-out;
+}
+.pwa-toast.offline { border-color: rgba(255, 133, 133, .38); }
+.pwa-toast p { flex: 1 1 200px; margin: 0; }
+.pwa-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.pwa-toast .btn { min-height: 34px; }
+.pwa-primary {
+  color: #0b1608;
+  font-weight: 700;
+  border-color: transparent;
+  background: var(--accent);
+}
+.pwa-primary:hover { background: var(--accent-2); border-color: transparent; }
+.pwa-install { white-space: nowrap; color: var(--accent); border-color: rgba(var(--accent-rgb), .4); }
+@media (display-mode: standalone) { .pwa-install { display: none !important; } }
+@media (max-width: 520px) { .btn.small.pwa-install { min-height: 40px; } }
+@media (max-width: 420px) { .pwa-long { display: none; } }
+@keyframes pwa-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
