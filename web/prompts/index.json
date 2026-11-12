@@ -20,6 +20,16 @@
       "title": "Product Promo Video",
       "description": "Prompt serbaguna untuk video promosi produk atau jasa: hook 3 detik, manfaat utama, bukti sosial, dan call-to-action. Cukup isi variabel di awal prompt (nama produk, harga, CTA, warna brand).",
       "specs": ["9:16", "20 detik", "1080 × 1920", "30 FPS"]
+    },
+    {
+      "id": "edukasi",
+      "file": "edukasi-remotion.md",
+      "download": "MASTER-PROMPT-EDUKASI-REMOTION.md",
+      "icon": "✎",
+      "tags": ["EDUKASI", "REMOTION", "MASTER PROMPT"],
+      "title": "Edukasi / Micro-Lesson",
+      "description": "Prompt untuk video belajar singkat satu topik: pertanyaan pembuka, tujuan belajar, tiga poin kunci dengan diagram SVG, contoh sehari-hari, dan kuis penutup. Menekankan akurasi dan jeda baca.",
+      "specs": ["9:16", "30 detik", "1080 × 1920", "30 FPS"]
     }
   ]
 }

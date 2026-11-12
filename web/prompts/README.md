@@ -30,3 +30,4 @@ Tidak perlu mengubah `index.html`, `prompt-library.js`, atau CSS.
 
 - `cinematic-tarot-remotion.md` — video tarot 30 detik (9:16).
 - `product-promo-remotion.md` — promosi produk/jasa 20 detik (9:16), umum dan tidak terkait tarot.
+- `edukasi-remotion.md` — micro-lesson edukasi 30 detik (9:16): pertanyaan, 3 poin kunci, contoh, kuis.
