@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="prompt-library.css">
   <link rel="stylesheet" href="brand.css">
 </head>
 <body>
@@ -42,6 +43,33 @@
           <span class="subtle-note">Pilih template untuk mulai menyusun video</span>
         </div>
         <div id="templates" class="template-grid" aria-label="Pilihan template"></div>
+      </section>
+
+      <section class="prompt-library panel" aria-labelledby="prompt-library-title">
+        <div class="prompt-library-heading">
+          <div>
+            <span class="section-kicker">PROMPT WORKSPACE</span>
+            <h2 id="prompt-library-title">Prompt Library</h2>
+            <p>Simpan dan gunakan kembali prompt kreatif langsung dari Remotion Studio.</p>
+          </div>
+          <span class="prompt-library-count">1 MASTER PROMPT</span>
+        </div>
+        <article class="prompt-card">
+          <div class="prompt-card-icon" aria-hidden="true">✧</div>
+          <div class="prompt-card-main">
+            <div class="prompt-card-meta"><span>JALUR TAROT</span><span>REMOTION</span><span>MASTER PROMPT</span></div>
+            <h3>Cinematic Tarot Video</h3>
+            <p>Prompt lengkap untuk membuat video TikTok “Pesan Semesta Hari Ini — Pick a Card” dengan art direction sinematik, storyboard 30 detik, motion design, dan aturan teknis Remotion.</p>
+            <div class="prompt-specs"><span>9:16</span><span>30 detik</span><span>1080 × 1920</span><span>30 FPS</span></div>
+            <div class="prompt-card-actions">
+              <button id="prompt-copy" class="btn prompt-primary" type="button">Salin prompt</button>
+              <button id="prompt-download" class="btn" type="button">Unduh .md</button>
+              <button id="prompt-toggle" class="btn" type="button" aria-expanded="false" aria-controls="prompt-preview">Lihat isi</button>
+            </div>
+            <p id="prompt-status" class="prompt-status" role="status" aria-live="polite"></p>
+            <div id="prompt-preview" class="prompt-preview" hidden><pre id="prompt-content">Memuat master prompt…</pre></div>
+          </div>
+        </article>
       </section>
 
       <section class="workspace panel">
@@ -112,5 +140,6 @@
     <footer><span>BYGA</span><span>Remotion Studio · Powered by Remotion</span></footer>
   </div>
   <script type="module" src="app.js"></script>
+  <script type="module" src="prompt-library.js"></script>
 </body>
 </html>
