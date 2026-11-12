@@ -3,6 +3,7 @@
 .prompt-library-heading h2 { margin: 5px 0 4px; font: 600 21px "Space Grotesk", sans-serif; }
 .prompt-library-heading p { margin: 0; color: var(--muted); font-size: 11px; }
 .prompt-library-count { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
+.prompt-list { display: grid; gap: 12px; }
 .prompt-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 15px; padding: 18px; border: 1px solid rgba(var(--accent-rgb),.24); border-radius: 13px; background: linear-gradient(120deg, rgba(var(--accent-rgb),.055), rgba(11,18,30,.65) 48%); }
 .prompt-card-icon { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(var(--accent-rgb),.3); border-radius: 12px; color: var(--accent); background: rgba(var(--accent-rgb),.07); font-size: 24px; }
 .prompt-card-main { min-width: 0; }

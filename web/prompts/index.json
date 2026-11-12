@@ -1,0 +1,25 @@
+{
+  "_doc": "Manifest Prompt Workspace. Tambah prompt baru: (1) taruh file .md di folder ini, (2) tambahkan satu objek di 'prompts' di bawah. Tidak perlu mengubah HTML/JS.",
+  "prompts": [
+    {
+      "id": "cinematic-tarot",
+      "file": "cinematic-tarot-remotion.md",
+      "download": "MASTER-PROMPT-CINEMATIC-TAROT-REMOTION.md",
+      "icon": "✧",
+      "tags": ["JALUR TAROT", "REMOTION", "MASTER PROMPT"],
+      "title": "Cinematic Tarot Video",
+      "description": "Prompt lengkap untuk membuat video TikTok “Pesan Semesta Hari Ini — Pick a Card” dengan art direction sinematik, storyboard 30 detik, motion design, dan aturan teknis Remotion.",
+      "specs": ["9:16", "30 detik", "1080 × 1920", "30 FPS"]
+    },
+    {
+      "id": "product-promo",
+      "file": "product-promo-remotion.md",
+      "download": "MASTER-PROMPT-PRODUCT-PROMO-REMOTION.md",
+      "icon": "▶",
+      "tags": ["PRODUK / UMKM", "REMOTION", "MASTER PROMPT"],
+      "title": "Product Promo Video",
+      "description": "Prompt serbaguna untuk video promosi produk atau jasa: hook 3 detik, manfaat utama, bukti sosial, dan call-to-action. Cukup isi variabel di awal prompt (nama produk, harga, CTA, warna brand).",
+      "specs": ["9:16", "20 detik", "1080 × 1920", "30 FPS"]
+    }
+  ]
+}
