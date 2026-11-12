@@ -1,11 +1,13 @@
-/* Ikon Byga di header dashboard.
-   Gambar disematkan sebagai data URI (PNG 56px, 32 warna) supaya tidak butuh file biner terpisah. */
+/* Identitas visual: Byga = produk utama, Remotion Studio = sub-brand/tagline.
+   Logo Byga disematkan sebagai data URI (PNG 56px) supaya tidak butuh file
+   biner terpisah. Border & radius mengikuti variabel desain yang sama dengan
+   elemen lain (--line) agar logo tetap selaras dengan tema. */
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-logo {
   width: 44px;
   height: 44px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--line);
   background: #000 url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAAYFBMVEXA/P2V9v2N5fx50PpP0flRvPtNr/g7rPxJou09ofs4n/w1mfsrlvonjPgifvMRe+cRa+MQXN8TTbgBScoEObsBLKYKJ2kFHF8DF1UBDS4AAgkAAQIAAQECAAAAAQAAAAC9Er5QAAAEq0lEQVR42p2WiZK0KgyFEVAUFzZBcRne/y1vgtpjLzP/1E11V29+nXByiJD0P4O8fN7P1zXHdv9+/xU8qT1fte/rnzNCbICtMVgbwpK2bXtO/TO4pT2GmtMCgocz+f6GknduDS0lFKIoSKHSEiBieq2avHGLZYSysiw5ZxRIjjy3y53c38BtXUZGWFWJqsooUvAkpI779kvGdQ8NqZpGNo2oMCujDIMWhC9PJHnpQzSs7FqIpoGcyObgULB9WiZ56Z8fmr7vu66VSFYCSsYAtOBPxd7AbduX2elhQLJF8jugbs7DvnwC17QHVbKyR7LDciXGAy25uStLLiNiH3gBfajaDOaFHjRK1VSc0jqkhxEucNsWTQlgjWyPUr8TSglaVSV21T7cR07TgyyM8My18OgwDpXas1xYJiPkIS25+jf3hIkGc3TaWH8Pa83QigaTEjpncj9BMIxreM4mtQdvTmeEI6y1OpOU1Get5CpUNlhgK52tbZhmjBtqmTVIQjePlAcIhXZFg1JKHZgNUFyYLzbARyDrMIC6FaP2CfRl2aEU0gc7W9hSapoOEBhKmZ1ssEJiN9WybScILdQCNYQu4PqsGu0YMplBbWqLiVE5AeB+gWuKqj+c1oV5Crouy6r3WO0UvKrruodiJy+xuULFXOsJgkMPp4U4W0JwA1Z+Ag52NUYdwuxblE/omNbvUp3S6O6um+I0kN5YRwuLYEWY0kqh0ADiehxMsIc4yWuIoZctggVnwRfUgaS2YN5CKdpPEdYIC1I+3VRN0WhjBrBzBhkNgREVEKyCgsohffRgu8GYeAPhbTBGYf9hjUMBWviaDCCrp9T6jguiABRgABMO7uHVFBw2UoRl1oTVFbjSgqqhJ7QuKSN6jlbkZmx3y6XtazEC1iLsAtMYZ3FpswNCT3HM1SECKCXvr5F1TYBtcVyBrHUEErcEdDHGCCT4DxwYlxnNzPX3frxq9byDjjR1/BxTLXEpp6Z3MCqBvZQ1umTO+XJk/wRbYS86FbeXjChPp0xuphD1c8CYbAEDI0xXwqcpFxQ0E9nhNq7yCAEIftLmmzvB/azWO2fgkXG00pBf8O8gnM+9398nOXy7xNmPox/dPeCjn6a4pLR+GMh7vgV8paC182eOI/Vgx6ENcMH6471jW5PlZT8qWUrcnnmHdlXtusfE+OGms8NuEIPruoKUeKtiFIaMEEYLWoRnkjzfHGlRCmO6Hu7jBKdoAQ8mtWn4NVE/gOsea8JF61Q3sHwGyM+Cddp1ArbZ5e930FMmZO8U2L0UkmJOKBdGu+ubkvKnlHcw2bKR3TA6ocADDSslY3n4mXHomrIMP4IjXDSYcVIqD68rtB/N0Df9z+CsB23ctDp9eidbB6aFh7kyXEPjk3OCc+OU4qDRMIfPnNNdWD1YcU4/GyDFuHztQTS9duC8MI7O9FXp0xf8kH455+BfLgmnUgWKLAnWJmFPjduSnoz64YC0gu0C3kR6PS4ritK2vU/vB8j30+O6RYPtgEGIQxNVPVT550F3SzNuKw9GWQK+m9P2p4MunjxRixxLjOsn7gL3N43yiWZb05sqv53J8dizvbz5I/jv+A9whAyE7RWdwQAAAABJRU5ErkJggg==) center / cover no-repeat;
   image-rendering: auto;
