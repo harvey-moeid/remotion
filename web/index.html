@@ -45,6 +45,7 @@
         <div id="templates" class="template-grid" aria-label="Pilihan template"></div>
       </section>
 
+      <!-- Kartu dibuat otomatis oleh prompt-library.js dari prompts/index.json -->
       <section class="prompt-library panel" aria-labelledby="prompt-library-title">
         <div class="prompt-library-heading">
           <div>
@@ -52,24 +53,9 @@
             <h2 id="prompt-library-title">Prompt Library</h2>
             <p>Simpan dan gunakan kembali prompt kreatif langsung dari Remotion Studio.</p>
           </div>
-          <span class="prompt-library-count">1 MASTER PROMPT</span>
+          <span id="prompt-count" class="prompt-library-count">MEMUAT…</span>
         </div>
-        <article class="prompt-card">
-          <div class="prompt-card-icon" aria-hidden="true">✧</div>
-          <div class="prompt-card-main">
-            <div class="prompt-card-meta"><span>JALUR TAROT</span><span>REMOTION</span><span>MASTER PROMPT</span></div>
-            <h3>Cinematic Tarot Video</h3>
-            <p>Prompt lengkap untuk membuat video TikTok “Pesan Semesta Hari Ini — Pick a Card” dengan art direction sinematik, storyboard 30 detik, motion design, dan aturan teknis Remotion.</p>
-            <div class="prompt-specs"><span>9:16</span><span>30 detik</span><span>1080 × 1920</span><span>30 FPS</span></div>
-            <div class="prompt-card-actions">
-              <button id="prompt-copy" class="btn prompt-primary" type="button">Salin prompt</button>
-              <button id="prompt-download" class="btn" type="button">Unduh .md</button>
-              <button id="prompt-toggle" class="btn" type="button" aria-expanded="false" aria-controls="prompt-preview">Lihat isi</button>
-            </div>
-            <p id="prompt-status" class="prompt-status" role="status" aria-live="polite"></p>
-            <div id="prompt-preview" class="prompt-preview" hidden><pre id="prompt-content">Memuat master prompt…</pre></div>
-          </div>
-        </article>
+        <div id="prompt-list" class="prompt-list"><p class="prompt-status">Memuat daftar prompt…</p></div>
       </section>
 
       <section class="workspace panel">
