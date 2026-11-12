@@ -69,13 +69,42 @@ Untuk template bawaan, `checkBuiltin()` memblokir render bila angka di luar rent
 
 **Batasan.** Pengecekan bersifat heuristik dan tidak menggantikan compiler: kode yang lolos masih bisa gagal di Remotion (tipe, runtime). Sebaliknya, lexer bisa salah membaca teks JSX tertentu (mis. apostrof atau `/` di dalam teks), sehingga warna kadang meleset; karena itu string tak tertutup hanya peringatan, bukan error. Batas 100.000 karakter dan keharusan `export default` juga dicek ulang oleh Worker (`worker/src/index.ts`).
 
+## PWA (pasang sebagai aplikasi + offline)
+
+Frontend bisa dipasang di layar utama / desktop dan kerangkanya tetap terbuka saat offline. Tetap statis murni (tanpa build step, tanpa dependensi).
+
+| File | Peran |
+| --- | --- |
+| `web/manifest.webmanifest` | Nama, ikon, warna, `display: standalone`, shortcut "Prompt Library" |
+| `web/sw.js` | Service worker: pra-cache kerangka + semua master prompt, strategi cache, update terkontrol |
+| `web/pwa.js` + `web/pwa.css` | Registrasi SW, toast "Versi baru tersedia", penanda offline, tombol **Pasang aplikasi** (di iOS: petunjuk manual) |
+| `web/offline.html` | Cadangan bila kerangka belum tersimpan dan perangkat offline |
+| `web/icons/` | `icon-192`, `icon-512`, `icon-maskable-512`, `apple-touch-icon` (dibuat otomatis) |
+| `scripts/make-pwa-icons.py` | Membuat ulang ikon dari logo Byga di `web/brand.css` (`pip install pillow`, lalu `python3 scripts/make-pwa-icons.py`) |
+
+**Strategi cache (`sw.js`).**
+
+- **Navigasi dan aset sama-origin** (HTML, JS, CSS, ikon, prompt): *network-first*. Saat online selalu versi terbaru, jadi modul JS tidak pernah tercampur versi lama dan baru. Bila jaringan lambat (>6 detik) atau mati, dipakai salinan cache. Server error 5xx juga jatuh ke cache.
+- **Google Fonts**: *stale-while-revalidate* di cache terpisah. Tanpa jaringan dan belum pernah dimuat, tampilan memakai font sistem (sudah ada di `font-family`).
+- **Tidak pernah disentuh**: API Worker, video, thumbnail (lintas origin), metode non-GET, permintaan `Range`, dan `?download=1`. Render, polling status, pemutar, dan unduhan berjalan persis seperti sebelumnya. Render video tetap butuh internet; saat offline muncul penanda di bawah layar.
+- **Master prompt** dibaca dari `prompts/index.json` saat install, jadi menambah prompt baru tidak perlu mengubah `sw.js`.
+
+**Update versi.** `deploy.yml` mengganti `__BUILD_ID__` di `sw.js` dengan 12 karakter SHA commit sebelum deploy Pages, sehingga tiap deploy mengubah `sw.js` dan memicu update. Versi baru *menunggu* (tidak aktif otomatis) sampai pengguna menekan **Muat ulang** di toast. Bila editor kode kustom berisi teks, diminta konfirmasi dulu karena kode tidak disimpan otomatis. Cache versi lama dihapus saat versi baru aktif. Cek versi baru juga berjalan tiap 30 menit dan saat tab kembali aktif.
+
+**Menambah file baru di `web/`** yang dimuat halaman (JS, CSS, ikon): tambahkan ke `CORE_ASSETS` di `sw.js`. File yang lupa didaftarkan tetap bekerja online dan ter-cache otomatis setelah dibuka sekali, tapi belum tentu tersedia offline pada kunjungan pertama.
+
+**Menguji.** Jalankan server statis (`python3 -m http.server -d web 8080`), buka `http://localhost:8080`, lalu di Chrome DevTools: *Application > Manifest* (tanpa error, ada tombol Install), *Application > Service Workers* (status *activated*), lalu centang *Offline* dan muat ulang. Di Pages, `/offline.html` dialihkan ke `/offline`; `sw.js` sudah menangani ini.
+
+**Catatan.** Pemasangan butuh HTTPS (Pages sudah HTTPS) atau `localhost`. iOS tidak punya dialog pasang otomatis: pakai Bagikan > Tambahkan ke Layar Utama. Setelah `sw.js` pertama kali ter-deploy, kunjungan berikutnya sudah bisa offline.
+
 ## Struktur
 
 | Folder | Isi |
 | --- | --- |
 | `remotion/` | Komposisi Remotion (`KineticTitle`, `TikTokSlides`), 1080x1920 dan 1920x1080 |
 | `worker/` | Cloudflare Worker (Hono): API, upload, penyajian MP4 + thumbnail, pembatalan, cron pembersihan |
-| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `editor.js`, `lexer.js`, `code-check.js`, `templates.js` |
+| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `editor.js`, `lexer.js`, `code-check.js`, `templates.js`, plus berkas PWA (`sw.js`, `pwa.js`, `manifest.webmanifest`, `icons/`) |
+| `scripts/` | Skrip bantu (pembuat ikon PWA) |
 | `.github/workflows/` | `render.yml` (render video + thumbnail) dan `deploy.yml` (deploy Worker + Pages) |
 
 ## Secret yang wajib diisi

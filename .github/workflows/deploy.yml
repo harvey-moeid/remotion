@@ -79,5 +79,11 @@ jobs:
       - name: Buat project Pages (abaikan jika sudah ada)
         run: npx --yes wrangler@4 pages project create remotion-studio --production-branch main || true
 
+      - name: Stamp versi service worker (PWA)
+        run: |
+          build="${GITHUB_SHA::12}"
+          sed -i "s/__BUILD_ID__/${build}/" web/sw.js
+          grep -q "const BUILD = '${build}';" web/sw.js || { echo "::error::Gagal menyisipkan BUILD ke web/sw.js"; exit 1; }
+
       - name: Deploy Pages
         run: npx --yes wrangler@4 pages deploy web --project-name remotion-studio --branch main --commit-dirty=true
