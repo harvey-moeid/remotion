@@ -195,14 +195,14 @@ WAJIB mengikuti batasan editor Kode Kustom repository harvey-moeid/remotion:
 
 Konfigurasi:
 
-\`\`\`js
+```js
 export const config = {
   durationInFrames: 900,
   fps: 30,
   width: 1080,
   height: 1920
 };
-\`\`\`
+```
 
 ## 7. Quality control
 
