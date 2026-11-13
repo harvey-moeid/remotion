@@ -45,3 +45,4 @@ Tidak perlu mengubah `index.html`, `prompt-library.js`, atau CSS.
 - `cinematic-tarot-remotion.md` — video tarot 30 detik (9:16). Tanpa variabel; edit lewat textarea.
 - `product-promo-remotion.md` — promosi produk/jasa 20 detik (9:16), umum dan tidak terkait tarot. Pilihan cepat: audiens, CTA, warna, font, aset.
 - `edukasi-remotion.md` — micro-lesson edukasi 30 detik (9:16): pertanyaan, 3 poin kunci, contoh, kuis. Pilihan cepat: target pelajar, warna, font.
+- `universal-remotion.md` — topik bebas, durasi (1–60 detik) dan rasio (9:16/16:9) fleksibel. Menjelaskan persis kontrak file CustomCode dan pengecekan otomatis (error vs peringatan) agar kode yang dihasilkan AI lolos pada percobaan pertama. Pilihan cepat: rasio, warna, font, aset.
