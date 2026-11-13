@@ -79,6 +79,35 @@
           "Arial Black untuk judul, Arial untuk isi"
         ]
       }
+    },
+    {
+      "id": "universal",
+      "file": "universal-remotion.md",
+      "download": "MASTER-PROMPT-UNIVERSAL-REMOTION.md",
+      "icon": "⚙",
+      "tags": ["UNIVERSAL", "REMOTION", "MASTER PROMPT"],
+      "title": "Universal Video (Topik Bebas)",
+      "description": "Prompt untuk topik apa pun di luar tarot/produk/edukasi. Durasi dan rasio fleksibel (dihitung otomatis ke frame/piksel), dan menjelaskan persis aturan kontrak file CustomCode serta pengecekan otomatis (error vs peringatan) agar kode lolos pada percobaan pertama.",
+      "specs": ["9:16 atau 16:9", "1–60 detik", "1080 × 1920 / 1920 × 1080", "30 FPS"],
+      "choices": {
+        "RATIO": ["9:16", "16:9"],
+        "WARNA_BRAND": [
+          "primer #0B1220, sekunder #1E293B, aksen #38BDF8",
+          "primer #111111, sekunder #2A2A2A, aksen #FFC107",
+          "primer #0F2E24, sekunder #1B4D3E, aksen #7BE0A8",
+          "primer #FFF8F0, sekunder #F2D9C4, aksen #E4572E"
+        ],
+        "FONT": [
+          "Space Grotesk untuk judul, DM Sans untuk isi",
+          "Georgia untuk judul, Arial untuk isi",
+          "Arial Black untuk judul, Arial untuk isi"
+        ],
+        "ASET_TERSEDIA": [
+          "tidak ada — gunakan bentuk geometri dan teks",
+          "logo saja",
+          "logo dan foto produk"
+        ]
+      }
     }
   ]
 }
