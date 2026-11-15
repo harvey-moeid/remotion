@@ -37,7 +37,7 @@ Catatan: `DISPATCH_TOKEN` sudah punya izin **Actions: Read and write**, cukup un
 
 | Endpoint | Auth | Fungsi |
 | --- | --- | --- |
-| `POST /api/render` | publik (kode akses untuk CustomCode) | Buat job + picu workflow |
+| `POST /api/render` | `X-Access-Code` untuk CustomCode/aset; `body.accessCode` tetap didukung untuk kompatibilitas | Buat job + picu workflow |
 | `GET /api/jobs/:id` | publik | Status job (`videoUrl`, `thumbUrl`) |
 | `POST /api/jobs/:id/cancel` | publik (id UUID tak bisa ditebak) | Batalkan job antre/berjalan |
 | `POST /api/jobs/:id/status` | Bearer `UPLOAD_TOKEN` | Workflow lapor `rendering`/`failed` (409 bila dibatalkan) |
