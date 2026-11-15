@@ -68,6 +68,7 @@ Template **Kode kustom** memakai editor buatan sendiri (tanpa dependensi, tanpa 
 | --- | --- |
 | `web/lexer.js` | Lexer ringan TS/TSX (komentar, string, template, regex, angka, keyword, tag JSX). Bukan parser penuh. Dipakai bersama oleh editor dan pengecekan |
 | `web/editor.js` | Editor: `<textarea>` transparan di atas `<pre>` berwarna + gutter nomor baris. Tab/Shift+Tab (indentasi, juga multi-baris), Enter mempertahankan indentasi, Esc lalu Tab untuk keluar (aksesibilitas) |
+| `web/code-rules.js` | Aturan aset/jaringan kode kustom (host gambar, batas ukuran, validasi `<Img>`/`<Audio>`/URL). Satu sumber: dipakai Worker dan `code-check.js` |
 | `web/code-check.js` | `checkCode()` untuk kode kustom dan `checkBuiltin()` untuk form template bawaan |
 
 **Cara kerja editor.** Pengguna mengetik di textarea (caret, seleksi, undo, IME, dan mobile tetap bawaan browser); warna datang dari `<pre>` di bawahnya dengan font/padding identik. Satu kontainer (`.ed-scroll`) yang digulir, jadi gutter dan pewarnaan tidak perlu disinkronkan lewat JS (gutter `position: sticky`). Konstanta `LINE_H`, `PAD_Y`, `PAD_X` di `editor.js` harus sama dengan CSS `.ed-*` di `styles.css`. Tanpa JS / bila editor gagal dimuat, textarea tetap bisa dipakai biasa.
@@ -118,7 +119,7 @@ Frontend bisa dipasang di layar utama / desktop dan kerangkanya tetap terbuka sa
 | --- | --- |
 | `remotion/` | Komposisi Remotion (`KineticTitle`, `TikTokSlides`), aset tetap di `public/`, 1080x1920 dan 1920x1080 |
 | `worker/` | Cloudflare Worker (Hono): API, upload, penyajian MP4 + thumbnail, pembatalan, cron pembersihan |
-| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `asset-library.js`, `editor.js`, `lexer.js`, `code-check.js`, `templates.js`, plus berkas PWA (`sw.js`, `pwa.js`, `manifest.webmanifest`, `icons/`) |
+| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `asset-library.js`, `editor.js`, `lexer.js`, `code-rules.js`, `code-check.js`, `templates.js`, plus berkas PWA (`sw.js`, `pwa.js`, `manifest.webmanifest`, `icons/`) |
 | `scripts/` | Skrip bantu (pembuat ikon PWA) |
 | `.github/workflows/` | `render.yml` (render video + thumbnail) dan `deploy.yml` (deploy Worker + Pages) |
 
@@ -137,7 +138,7 @@ GitHub repo > Settings > Secrets and variables > Actions > New repository secret
 
 ## URL gambar (Tahap 2)
 
-Field `URL gambar` pada template Judul Kinetik menerima HTTPS dari host persis `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`. Worker memvalidasi URL; URL HTTP, IP/localhost, port eksplisit, kredensial, dan host lain ditolak. Kode kustom hanya boleh memuat URL gambar literal melalui `<Img src="https://..." onError={...} />` dari host tersebut dan wajib menampilkan fallback. `fetch()`, elemen `<img>`, URL audio, dan URL video tidak diizinkan. Daftar domain disinkronkan di `worker/wrangler.toml`, `web/code-check.js`, dan prompt.
+Field `URL gambar` pada template Judul Kinetik menerima HTTPS dari host persis `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`. Worker memvalidasi URL; URL HTTP, IP/localhost, port eksplisit, kredensial, dan host lain ditolak. Kode kustom hanya boleh memuat URL gambar literal melalui `<Img src="https://..." onError={...} />` dari host tersebut dan wajib menampilkan fallback. `fetch()`, elemen `<img>`, URL audio, dan URL video tidak diizinkan. Daftar domain, batas ukuran, dan aturan `<Img>`/`<Audio>`/URL ditulis sekali di `web/code-rules.js` dan dipakai Worker serta `web/code-check.js`; hanya teks prompt yang disalin manual.
 
 ## Aset statis (Tahap 1)
 

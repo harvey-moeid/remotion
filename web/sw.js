@@ -46,6 +46,7 @@ const CORE_ASSETS = [
   'asset-library.js',
   'editor.js',
   'lexer.js',
+  'code-rules.js',
   'code-check.js',
   'prompt-library.js',
   'pwa.js',
