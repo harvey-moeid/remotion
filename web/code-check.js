@@ -21,7 +21,7 @@ export const ALLOWED_IMAGE_HOSTS = ['images.unsplash.com', 'images.pexels.com', 
 export function isAllowedImageUrl(value) {
   if (typeof value !== 'string' || !value || value.length > 2048) return false;
   try { const url = new URL(value), host = url.hostname.toLowerCase();
-    const isIp = /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.localhost');
+    const isIp = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.localhost');
     return url.protocol === 'https:' && !url.username && !url.password && !url.port && !isIp && ALLOWED_IMAGE_HOSTS.includes(host);
   } catch { return false; }
 }
@@ -203,23 +203,23 @@ export function checkCode(code) {
       continue;
     }
     const path = text(arg).slice(1, -1);
-    if (!path || path.startsWith('/') || path.includes('..') || /^[a-z]+:/i.test(path) || path.includes('\\\\')) {
+    if (!path || path.startsWith('/') || path.includes('..') || /^[a-z]+:/i.test(path) || path.includes('\\')) {
       add('error', 'Path staticFile() harus relatif, tanpa .., URL, atau garis miring awal.', arg.start);
     }
   }
 
   // 8) URL gambar di kode kustom: URL literal allowlist, <Img>, dan onError fallback.
-  for (const match of code.matchAll(/<Img\\b([^>]*)>/gs)) {
+  for (const match of code.matchAll(/<Img\b([^>]*)>/gs)) {
     const attrs = match[1];
-    const src = /(?:^|\\s)src\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|\\{\\s*staticFile\\(\\s*(['\"])(.*?)\\3\\s*\\)\\s*\\})/.exec(attrs);
+    const src = /(?:^|\s)src\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|\{\s*staticFile\(\s*(['\"])(.*?)\3\s*\)\s*\})/.exec(attrs);
     if (!src) { add('error', '<Img> wajib memakai URL literal allowlist atau staticFile() dengan path literal.', match.index || 0); continue; }
     const value = src[1] ?? src[2] ?? src[4] ?? '';
-    if (/^https?:\\/\\//i.test(value)) {
+    if (/^https?:\/\//i.test(value)) {
       if (!isAllowedImageUrl(value)) add('error', 'URL gambar harus HTTPS dari domain allowlist.', match.index || 0);
-      if (!/\\bonError\\s*=/.test(attrs)) add('error', 'Gambar dari URL wajib memiliki onError dan fallback visual.', match.index || 0);
+      if (!/\bonError\s*=/.test(attrs)) add('error', 'Gambar dari URL wajib memiliki onError dan fallback visual.', match.index || 0);
     } else if (src[4] === undefined || !value || value.startsWith('/') || value.includes('..')) add('error', 'Aset lokal <Img> wajib memakai staticFile() dengan path relatif tanpa .. .', match.index || 0);
   }
-  if (/<img\\b/i.test(code)) add('error', 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.', 0);
+  if (/<img\b/.test(code)) add('error', 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.', 0);
 
   // 9) Heuristik JSX/React: bergantung pada konfigurasi transform runner, jadi hanya peringatan.
   const firstTag = sig.find((t) => t.type === 'tag');

@@ -60,7 +60,7 @@ function isAllowedImageUrl(value: unknown, env: Bindings): boolean {
 }
 function validateCustomImageSources(code: string, env: Bindings): string | null {
   if (/\bfetch\s*\(/.test(code)) return 'fetch() tidak diizinkan; gunakan <Img> dengan URL gambar allowlist.';
-  if (/<img\b/i.test(code)) return 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.';
+  if (/<img\b/.test(code)) return 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.';
   for (const match of code.matchAll(/<Img\b([^>]*)>/gs)) {
     const attrs = match[1];
     const src = /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*staticFile\(\s*(['"])(.*?)\3\s*\)\s*\})/.exec(attrs);
