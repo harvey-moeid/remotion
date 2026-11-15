@@ -97,6 +97,7 @@ const ASSET_RULES: Record<string, AssetRule> = {
   'application/x-font-ttf': {type: 'font', extension: 'ttf', maxBytes: 2 * 1024 * 1024, mime: 'font/ttf'},
   'application/vnd.ms-opentype': {type: 'font', extension: 'otf', maxBytes: 2 * 1024 * 1024, mime: 'font/otf'},
 };
+const ASSET_MIME_BY_EXTENSION: Record<string, string> = {png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', otf: 'font/otf'};
 const ASSET_KEY_RE = /^assets\/\d{4}-\d{2}-\d{2}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$/;
 
 function jakartaDate(): string {
@@ -499,11 +500,13 @@ app.post('/api/assets', async (c) => {
   const form = await c.req.formData().catch(() => null);
   const file = form?.get('file');
   if (!(file instanceof File)) return c.json({error: 'Pilih satu file aset'}, 400);
-  const rule = ASSET_RULES[file.type.toLowerCase()];
+  const suppliedMime = file.type.toLowerCase();
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const rule = ASSET_RULES[suppliedMime] ?? ASSET_RULES[ASSET_MIME_BY_EXTENSION[extension] ?? ''];
   if (!rule) return c.json({error: 'Format tidak didukung. Gunakan PNG/JPEG/WebP, MP3/WAV/OGG/AAC, atau WOFF/WOFF2/TTF/OTF.'}, 415);
   if (file.size <= 0 || file.size > rule.maxBytes) return c.json({error: 'Ukuran file melewati batas untuk jenis aset ini'}, 413);
   const bytes = new Uint8Array(await file.arrayBuffer());
-  if (!hasSignature(bytes, file.type.toLowerCase())) return c.json({error: 'Isi file tidak cocok dengan MIME type yang dikirim'}, 415);
+  if (!hasSignature(bytes, rule.mime)) return c.json({error: 'Isi file tidak cocok dengan MIME type yang dikirim'}, 415);
 
   const date = jakartaDate();
   let slotKey = '';

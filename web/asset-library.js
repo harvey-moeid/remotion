@@ -6,6 +6,7 @@ const MIME_TYPE = {
   'font/woff2': 'font', 'font/woff': 'font', 'font/ttf': 'font', 'font/otf': 'font',
   'application/font-woff': 'font', 'application/x-font-ttf': 'font', 'application/vnd.ms-opentype': 'font',
 };
+const MIME_BY_EXTENSION = {png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',aac:'audio/aac',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf'};
 const formatBytes = (bytes) => bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 export function createAssetLibrary(apiBase) {
@@ -125,7 +126,8 @@ export function createAssetLibrary(apiBase) {
     const file = fileInput.files && fileInput.files[0];
     if (!file) return message('Pilih satu file terlebih dahulu.', 'error');
     if (!getAccessCode()) return message('Masukkan kode akses pemilik terlebih dahulu.', 'error');
-    const type = MIME_TYPE[file.type.toLowerCase()];
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    const type = MIME_TYPE[file.type.toLowerCase()] || MIME_TYPE[MIME_BY_EXTENSION[extension]];
     if (!type) return message('Format tidak didukung. Pilih gambar PNG/JPEG/WebP, audio MP3/WAV/OGG/AAC, atau font WOFF/WOFF2/TTF/OTF.', 'error');
     if (file.size <= 0 || file.size > MAX_BYTES[type]) return message(`Ukuran maksimum ${type}: ${formatBytes(MAX_BYTES[type])}.`, 'error');
     if (state.busy) return;

@@ -80,6 +80,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: Typecheck Worker
+        working-directory: worker
+        run: npm install --no-audit --no-fund && npm run typecheck
+
+      - name: Cek sintaks frontend statis
+        run: |
+          node --input-type=module --check < web/asset-library.js
+          node --input-type=module --check < web/app.js
+          node --input-type=module --check < web/code-check.js
+
       - name: Pasang library sistem untuk Chrome headless
         run: |
           sudo apt-get update -y
@@ -100,7 +110,7 @@ jobs:
           while IFS= read -r asset; do
             path=$(printf '%s' "$asset" | jq -r '.path // empty')
             url=$(printf '%s' "$asset" | jq -r '.url // empty')
-            [[ "$path" =~ ^assets/[0-9]{4}-[0-9]{2}-[0-9]{2}/[0-9a-f-]{36}\\.(png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$ ]] || { echo '::error::Path aset tidak valid'; exit 1; }
+            [[ "$path" =~ ^assets/[0-9]{4}-[0-9]{2}-[0-9]{2}/[0-9a-f-]{36}\.(png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$ ]] || { echo '::error::Path aset tidak valid'; exit 1; }
             [[ "$url" == "$API_URL/assets/"* ]] || { echo '::error::URL aset bukan dari Worker'; exit 1; }
             mkdir -p "public/$(dirname "$path")"
             curl -fsS --retry 2 --retry-delay 2 --max-time 90 "$url" -o "public/$path"
