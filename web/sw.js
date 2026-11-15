@@ -43,6 +43,7 @@ const CORE_ASSETS = [
   'app.js',
   'config.js',
   'templates.js',
+  'asset-library.js',
   'editor.js',
   'lexer.js',
   'code-check.js',
