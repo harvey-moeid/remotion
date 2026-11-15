@@ -42,6 +42,8 @@ const MAX_PROPS_CHARS = 20_000;
 const MAX_UPLOAD_BYTES = 90 * 1024 * 1024;
 const MAX_THUMB_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_URL_LENGTH = 2048;
+const MAX_ASSET_SELECTIONS = 20;
+const ASSET_RETENTION_PREFIXES = ['renders/', 'thumbs/', 'assets/', 'asset-quota/'];
 const JOB_TTL_SECONDS = 7 * 24 * 3600;
 
 // Template kode kustom: kode pengguna disimpan sementara di KV, lalu diambil oleh GitHub Actions.
@@ -76,6 +78,69 @@ function validateCustomImageSources(code: string, env: Bindings): string | null 
   if (/<Audio\b[^>]*src\s*=\s*["']https?:\/\//i.test(code)) return 'Audio eksternal tidak diizinkan; gunakan staticFile() untuk audio lokal.';
   return null;
 }
+type AssetRule = {type: 'image' | 'audio' | 'font'; extension: string; maxBytes: number; mime: string};
+const ASSET_RULES: Record<string, AssetRule> = {
+  'image/png': {type: 'image', extension: 'png', maxBytes: 5 * 1024 * 1024, mime: 'image/png'},
+  'image/jpeg': {type: 'image', extension: 'jpg', maxBytes: 5 * 1024 * 1024, mime: 'image/jpeg'},
+  'image/webp': {type: 'image', extension: 'webp', maxBytes: 5 * 1024 * 1024, mime: 'image/webp'},
+  'audio/mpeg': {type: 'audio', extension: 'mp3', maxBytes: 15 * 1024 * 1024, mime: 'audio/mpeg'},
+  'audio/mp3': {type: 'audio', extension: 'mp3', maxBytes: 15 * 1024 * 1024, mime: 'audio/mpeg'},
+  'audio/wav': {type: 'audio', extension: 'wav', maxBytes: 15 * 1024 * 1024, mime: 'audio/wav'},
+  'audio/x-wav': {type: 'audio', extension: 'wav', maxBytes: 15 * 1024 * 1024, mime: 'audio/wav'},
+  'audio/ogg': {type: 'audio', extension: 'ogg', maxBytes: 15 * 1024 * 1024, mime: 'audio/ogg'},
+  'audio/aac': {type: 'audio', extension: 'aac', maxBytes: 15 * 1024 * 1024, mime: 'audio/aac'},
+  'font/woff2': {type: 'font', extension: 'woff2', maxBytes: 2 * 1024 * 1024, mime: 'font/woff2'},
+  'font/woff': {type: 'font', extension: 'woff', maxBytes: 2 * 1024 * 1024, mime: 'font/woff'},
+  'font/ttf': {type: 'font', extension: 'ttf', maxBytes: 2 * 1024 * 1024, mime: 'font/ttf'},
+  'font/otf': {type: 'font', extension: 'otf', maxBytes: 2 * 1024 * 1024, mime: 'font/otf'},
+  'application/font-woff': {type: 'font', extension: 'woff', maxBytes: 2 * 1024 * 1024, mime: 'font/woff'},
+  'application/x-font-ttf': {type: 'font', extension: 'ttf', maxBytes: 2 * 1024 * 1024, mime: 'font/ttf'},
+  'application/vnd.ms-opentype': {type: 'font', extension: 'otf', maxBytes: 2 * 1024 * 1024, mime: 'font/otf'},
+};
+const ASSET_KEY_RE = /^assets\/\d{4}-\d{2}-\d{2}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$/;
+
+function jakartaDate(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return get('year') + '-' + get('month') + '-' + get('day');
+}
+
+async function requireAccessCode(c: Ctx): Promise<boolean> {
+  return Boolean(c.env.ACCESS_CODE) && safeEqual(c.req.header('x-access-code') ?? '', c.env.ACCESS_CODE ?? '');
+}
+
+function hasSignature(bytes: Uint8Array, mime: string): boolean {
+  const ascii = (offset: number, value: string) => value.split('').every((ch, i) => bytes[offset + i] === ch.charCodeAt(0));
+  if (mime === 'image/png') return bytes.length >= 8 && bytes[0] === 0x89 && ascii(1, 'PNG') && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  if (mime === 'image/jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mime === 'image/webp') return bytes.length >= 12 && ascii(0, 'RIFF') && ascii(8, 'WEBP');
+  if (mime === 'audio/wav' || mime === 'audio/x-wav') return bytes.length >= 12 && ascii(0, 'RIFF') && ascii(8, 'WAVE');
+  if (mime === 'audio/ogg') return bytes.length >= 4 && ascii(0, 'OggS');
+  if (mime === 'audio/mpeg' || mime === 'audio/mp3') return bytes.length >= 3 && (ascii(0, 'ID3') || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0));
+  if (mime === 'audio/aac') return bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xf6) === 0xf0;
+  if (mime === 'font/woff2') return bytes.length >= 4 && ascii(0, 'wOF2');
+  if (mime === 'font/woff' || mime === 'application/font-woff') return bytes.length >= 4 && ascii(0, 'wOFF');
+  if (mime === 'font/ttf' || mime === 'application/x-font-ttf') return bytes.length >= 4 && bytes[0] === 0 && bytes[1] === 1 && bytes[2] === 0 && bytes[3] === 0;
+  if (mime === 'font/otf' || mime === 'application/vnd.ms-opentype') return bytes.length >= 4 && ascii(0, 'OTTO');
+  return false;
+}
+
+function assetSignature(env: Bindings, key: string, expires: string): Promise<string> {
+  const enc = new TextEncoder();
+  return (async () => {
+    const cryptoKey = await crypto.subtle.importKey('raw', enc.encode(env.ACCESS_CODE ?? ''), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
+    const signed = new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(key + '\n' + expires)));
+    return Array.from(signed, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  })();
+}
+
+async function signedAssetUrl(env: Bindings, origin: string, key: string): Promise<{path: string; url: string}> {
+  const expires = String(Math.floor(Date.now() / 1000) + 6 * 3600);
+  const signature = await assetSignature(env, key, expires);
+  const encodedPath = key.slice('assets/'.length);
+  return {path: encodedPath, url: origin + '/assets/' + encodedPath + '?expires=' + expires + '&signature=' + signature};
+}
+
 const app = new Hono<{Bindings: Bindings}>();
 
 // CORS: hanya origin yang terdaftar di ALLOWED_ORIGINS.
@@ -89,7 +154,7 @@ app.use('*', async (c, next) => {
     c.header('Access-Control-Allow-Origin', origin);
     c.header('Vary', 'Origin');
     c.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    c.header('Access-Control-Allow-Headers', 'Content-Type');
+    c.header('Access-Control-Allow-Headers', 'Content-Type, X-Access-Code');
   }
   if (c.req.method === 'OPTIONS') {
     return c.body(null, 204);
@@ -142,6 +207,7 @@ app.post('/api/render', async (c) => {
     props?: unknown;
     code?: unknown;
     accessCode?: unknown;
+    assets?: unknown;
   } | null;
 
   if (!body || typeof body.template !== 'string' || !TEMPLATE_RE.test(body.template)) {
@@ -156,6 +222,14 @@ app.post('/api/render', async (c) => {
     return c.json({error: 'props harus berupa object'}, 400);
   }
   if (Object.prototype.hasOwnProperty.call(props, 'imageUrl') && props.imageUrl !== '' && !isAllowedImageUrl(props.imageUrl, c.env)) return c.json({error: 'URL gambar harus HTTPS dan berasal dari domain yang diizinkan'}, 400);
+  const assetKeys = Array.isArray(body.assets) ? body.assets : [];
+  if (assetKeys.length > MAX_ASSET_SELECTIONS || assetKeys.some((key) => typeof key !== 'string' || !ASSET_KEY_RE.test(key))) return c.json({error: 'Daftar aset tidak valid (maksimal 20 file)'}, 400);
+  if (assetKeys.length > 0 && !(await requireAccessCode(c))) return c.json({error: 'Kode akses diperlukan untuk memakai aset pribadi'}, 401);
+  const uniqueAssetKeys = [...new Set(assetKeys as string[])];
+  const assetObjects = await Promise.all(uniqueAssetKeys.map((key) => c.env.RENDERS.head(key)));
+  if (assetObjects.some((obj) => !obj || !obj.customMetadata?.assetType)) return c.json({error: 'Satu atau lebih aset tidak ditemukan atau tidak valid'}, 400);
+  const origin = new URL(c.req.url).origin;
+  const signedAssets = await Promise.all(uniqueAssetKeys.map((key) => signedAssetUrl(c.env, origin, key)));
   const propsJson = JSON.stringify(props);
   if (propsJson.length > MAX_PROPS_CHARS) {
     return c.json({error: 'props terlalu besar'}, 413);
@@ -217,7 +291,7 @@ app.post('/api/render', async (c) => {
     },
     body: JSON.stringify({
       ref: c.env.GH_REF,
-      inputs: {jobId: id, template: body.template, ratio, props: propsJson},
+      inputs: {jobId: id, template: body.template, ratio, props: propsJson, assets: JSON.stringify(signedAssets)},
     }),
   });
 
@@ -416,6 +490,79 @@ app.on(['POST', 'PUT'], '/upload-thumb', async (c) => {
   return c.json({ok: true, url: `/thumbs/${jobId}.jpg`, size: length});
 });
 
+// Upload aset pribadi: hanya pemilik dengan ACCESS_CODE; kuota 10 slot/hari dijaga atomik di R2.
+app.post('/api/assets', async (c) => {
+  if (!(await requireAccessCode(c))) return c.json({error: 'Kode akses salah atau belum dikonfigurasi'}, 401);
+  const length = Number(c.req.header('content-length') ?? 0);
+  if (length > 16 * 1024 * 1024) return c.json({error: 'Request terlalu besar'}, 413);
+  const form = await c.req.formData().catch(() => null);
+  const file = form?.get('file');
+  if (!(file instanceof File)) return c.json({error: 'Pilih satu file aset'}, 400);
+  const rule = ASSET_RULES[file.type.toLowerCase()];
+  if (!rule) return c.json({error: 'Format tidak didukung. Gunakan PNG/JPEG/WebP, MP3/WAV/OGG/AAC, atau WOFF/WOFF2/TTF/OTF.'}, 415);
+  if (file.size <= 0 || file.size > rule.maxBytes) return c.json({error: 'Ukuran file melewati batas untuk jenis aset ini'}, 413);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!hasSignature(bytes, file.type.toLowerCase())) return c.json({error: 'Isi file tidak cocok dengan MIME type yang dikirim'}, 415);
+
+  const date = jakartaDate();
+  let slotKey = '';
+  for (let slot = 1; slot <= 10; slot++) {
+    const candidate = 'asset-quota/' + date + '/' + String(slot).padStart(2, '0');
+    const reserved = await c.env.RENDERS.put(candidate, crypto.randomUUID(), {onlyIf: {etagDoesNotMatch: '*'}, httpMetadata: {contentType: 'text/plain'}});
+    if (reserved) { slotKey = candidate; break; }
+  }
+  if (!slotKey) return c.json({error: 'Kuota upload hari ini habis (maksimal 10 file)'}, 429);
+
+  const id = crypto.randomUUID();
+  const key = 'assets/' + date + '/' + id + '.' + rule.extension;
+  const originalName = file.name.replace(/[\\/\\u0000-\\u001f]/g, '_').slice(0, 120) || 'asset.' + rule.extension;
+  try {
+    await c.env.RENDERS.put(key, bytes, {
+      httpMetadata: {contentType: rule.mime, cacheControl: 'private, max-age=3600'},
+      customMetadata: {assetId: id, assetType: rule.type, originalName, uploadedAt: nowIso()},
+    });
+  } catch (error) {
+    await c.env.RENDERS.delete(slotKey);
+    throw error;
+  }
+  return c.json({ok: true, id, path: key, type: rule.type, name: originalName, contentType: rule.mime, size: file.size, uploadedAt: nowIso()}, 201);
+});
+
+// Daftar aset pribadi beserta URL pratinjau sementara; daftar dan metadata tidak publik.
+app.get('/api/assets', async (c) => {
+  if (!(await requireAccessCode(c))) return c.json({error: 'Kode akses salah atau belum dikonfigurasi'}, 401);
+  const objects: R2Object[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await c.env.RENDERS.list({prefix: 'assets/', cursor, limit: 100, include: ['httpMetadata', 'customMetadata']});
+    objects.push(...page.objects);
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor && objects.length < 200);
+  const origin = new URL(c.req.url).origin;
+  const assets = await Promise.all(objects.map(async (obj) => {
+    const signed = await signedAssetUrl(c.env, origin, obj.key);
+    return {path: obj.key, staticPath: signed.path, name: obj.customMetadata?.originalName ?? obj.key.split('/').pop(), type: obj.customMetadata?.assetType ?? 'unknown', contentType: obj.httpMetadata?.contentType ?? 'application/octet-stream', size: obj.size, uploadedAt: obj.customMetadata?.uploadedAt ?? obj.uploaded.toISOString(), previewUrl: signed.url};
+  }));
+  assets.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+  return c.json({assets, uploadLimit: 10, retentionDays: Number(c.env.RETENTION_DAYS || 7)});
+});
+
+// URL baca bertanda tangan HMAC, berlaku maksimal 6 jam; tidak memakai UPLOAD_TOKEN.
+app.get('/assets/:date/:name', async (c) => {
+  const date = c.req.param('date'), name = c.req.param('name');
+  const key = 'assets/' + date + '/' + name;
+  const expires = c.req.query('expires') ?? '', signature = c.req.query('signature') ?? '';
+  const exp = Number(expires), now = Math.floor(Date.now() / 1000);
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^[0-9a-f-]{36}\\.(?:png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$/.test(name) || !Number.isInteger(exp) || exp < now || exp > now + 6 * 3600 || !c.env.ACCESS_CODE) return c.json({error: 'link aset tidak valid atau kedaluwarsa'}, 403);
+  if (!(await safeEqual(signature, await assetSignature(c.env, key, expires)))) return c.json({error: 'signature tidak valid'}, 403);
+  const obj = await c.env.RENDERS.get(key);
+  if (!obj) return c.json({error: 'aset tidak ditemukan'}, 404);
+  const headers = new Headers({'Cache-Control': 'private, max-age=300', ETag: obj.httpEtag, 'X-Content-Type-Options': 'nosniff'});
+  obj.writeHttpMetadata(headers);
+  headers.set('Content-Disposition', 'inline');
+  return new Response(obj.body, {headers});
+});
+
 // 5) Sajikan MP4 dari R2 (mendukung Range agar bisa di-seek di pemutar).
 app.get('/files/:name', async (c) => {
   const match = /^([0-9a-f-]{36})[.]mp4$/.exec(c.req.param('name'));
@@ -503,7 +650,7 @@ app.onError((err, c) => {
 async function cleanup(env: Bindings): Promise<void> {
   const days = Number(env.RETENTION_DAYS || 7);
   const cutoff = Date.now() - days * 24 * 3600 * 1000;
-  for (const prefix of ['renders/', 'thumbs/']) {
+  for (const prefix of ASSET_RETENTION_PREFIXES) {
     let cursor: string | undefined;
     do {
       const list = await env.RENDERS.list({prefix, cursor, limit: 500});
