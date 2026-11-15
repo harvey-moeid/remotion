@@ -20,6 +20,8 @@ export function createAssetLibrary(apiBase) {
   const getAccessCode = () => input.value.trim();
   function setAccessCode(value) {
     input.value = value || '';
+    const customInput = $('#accessCode');
+    if (customInput) customInput.value = value || '';
     try {
       if (value) sessionStorage.setItem('remotion.accessCode', value);
       else sessionStorage.removeItem('remotion.accessCode');
@@ -45,7 +47,7 @@ export function createAssetLibrary(apiBase) {
       const select = document.createElement('input');
       select.type = 'checkbox';
       select.checked = state.selected.has(asset.path);
-      select.setAttribute('aria-label', 'Sertakan ' + asset.name saat render);
+      select.setAttribute('aria-label', 'Sertakan ' + asset.name + ' saat render');
       select.addEventListener('change', () => {
         if (select.checked) state.selected.add(asset.path);
         else state.selected.delete(asset.path);
@@ -153,6 +155,8 @@ export function createAssetLibrary(apiBase) {
   }
 
   input.addEventListener('input', () => {
+    const customInput = $('#accessCode');
+    if (customInput) customInput.value = input.value;
     try {
       if (input.value) sessionStorage.setItem('remotion.accessCode', input.value);
       else sessionStorage.removeItem('remotion.accessCode');

@@ -352,7 +352,8 @@ async function startRender() {
   const assetPaths = new Set(assetLibrary.getSelectedPaths());
   if (!state.template.custom && typeof body.props.logoFile === 'string' && body.props.logoFile.startsWith('assets/')) assetPaths.add(body.props.logoFile);
   if (state.template.custom) {
-    for (const match of $('#code').value.matchAll(/staticFile\\(\\s*['\"](assets\\/[^'\"]+)['\"]\\s*\\)/g)) assetPaths.add(match[1]);
+    const assetPathPattern = /staticFile\(\s*['\"](assets\/[^'\"]+)['\"]\s*\)/g;
+    for (const match of $('#code').value.matchAll(assetPathPattern)) assetPaths.add(match[1]);
   }
   if (assetPaths.size > 20) return showMessage('Maksimal 20 aset dapat dipakai dalam satu render.');
   if (assetPaths.size > 0) {
