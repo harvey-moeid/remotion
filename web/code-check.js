@@ -223,6 +223,29 @@ export function checkCode(code) {
   }
   if (/<img\b/.test(code)) add('error', 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.', 0);
 
+  // URL eksternal hanya boleh pada src <Img> dengan host allowlist dan fallback.
+  if (/<(?:OffthreadVideo|video)\b/i.test(code)) add('error', 'Video tidak termasuk jenis aset yang diaktifkan.', 0);
+  if (/\b(?:XMLHttpRequest|WebSocket|EventSource)\b|new\s+Image\s*\(/.test(code)) add('error', 'API jaringan alternatif tidak diizinkan; URL eksternal hanya melalui <Img>.', 0);
+  const allowedUrlRanges = [];
+  for (const match of code.matchAll(/<Audio\b([^>]*)>/gs)) {
+    const src = /(?:^|\s)src\s*=\s*\{\s*staticFile\(\s*(['"])(.*?)\1\s*\)\s*\}/.exec(match[1]);
+    if (!src || !src[2] || src[2].startsWith('/') || src[2].includes('..')) add('error', '<Audio> wajib memakai staticFile() dengan path lokal literal.', match.index || 0);
+  }
+  for (const match of code.matchAll(/<Img\b([^>]*)>/gs)) {
+    const attrs = match[1];
+    const src = /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*staticFile\(\s*(['"])(.*?)\3\s*\)\s*\})/.exec(attrs);
+    if (!src) continue;
+    const value = src[1] ?? src[2] ?? src[4] ?? '';
+    if (/^https?:\/\//i.test(value)) {
+      const tagStart = match.index || 0;
+      allowedUrlRanges.push([tagStart + match[0].indexOf(value), tagStart + match[0].indexOf(value) + value.length]);
+    }
+  }
+  for (const match of code.matchAll(/https?:\/\/[^\s"'\x60<>]+/g)) {
+    const position = match.index || 0;
+    if (!allowedUrlRanges.some(([from, to]) => position >= from && position < to)) add('error', 'URL jaringan hanya boleh berada di src <Img> dan memakai domain allowlist.', position);
+  }
+
   // 9) Heuristik JSX/React: bergantung pada konfigurasi transform runner, jadi hanya peringatan.
   const firstTag = sig.find((t) => t.type === 'tag');
   if (firstTag && !sig.some((t) => isWord(t, 'React'))) {
