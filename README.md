@@ -101,7 +101,7 @@ Frontend bisa dipasang di layar utama / desktop dan kerangkanya tetap terbuka sa
 
 | Folder | Isi |
 | --- | --- |
-| `remotion/` | Komposisi Remotion (`KineticTitle`, `TikTokSlides`), 1080x1920 dan 1920x1080 |
+| `remotion/` | Komposisi Remotion (`KineticTitle`, `TikTokSlides`), aset tetap di `public/`, 1080x1920 dan 1920x1080 |
 | `worker/` | Cloudflare Worker (Hono): API, upload, penyajian MP4 + thumbnail, pembatalan, cron pembersihan |
 | `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `editor.js`, `lexer.js`, `code-check.js`, `templates.js`, plus berkas PWA (`sw.js`, `pwa.js`, `manifest.webmanifest`, `icons/`) |
 | `scripts/` | Skrip bantu (pembuat ikon PWA) |
@@ -119,6 +119,10 @@ GitHub repo > Settings > Secrets and variables > Actions > New repository secret
 | `UPLOAD_TOKEN` | String acak panjang (mis. `openssl rand -hex 32`). Dipakai bersama oleh Worker dan render.yml untuk /upload |
 
 `deploy.yml` otomatis menyalin `UPLOAD_TOKEN` dan `DISPATCH_TOKEN` ke secret Worker, jadi tidak ada secret di repo.
+
+## Aset statis (Tahap 1)
+
+Simpan aset yang ikut repository di `remotion/public/` dengan folder `logo/`, `audio/`, atau `fonts/`. Nama file harus deskriptif dan stabil; hindari spasi, huruf besar, dan nama duplikat. Di kode kustom gunakan `Img`/`Audio` dari `remotion` dan `staticFile('folder/nama-file.ext')`. Font lokal dapat dimuat memakai `@font-face` dengan URL dari `staticFile()`. Path harus relatif dari `public/`, sesuai daftar aset, dan tidak boleh ditebak. Template Judul Kinetik menyediakan field opsional `logoFile`; kosongkan untuk tampilan lama atau isi `logo/sample-mark.svg` untuk contoh. Aset yang tidak tersedia harus diganti fallback geometri.
 
 ## Menambah template baru
 

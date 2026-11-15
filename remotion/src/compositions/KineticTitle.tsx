@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {FONT_STACK, Ratio, clamp, safeRatio} from '../lib/ratio';
 import {withAlpha} from '../lib/color';
 
@@ -10,6 +10,7 @@ export type KineticTitleProps = {
   accentColor: string;
   backgroundColor: string;
   durationSeconds: number;
+  logoFile: string;
   ratio: Ratio;
 };
 
@@ -20,6 +21,7 @@ export const kineticTitleDefaults: KineticTitleProps = {
   accentColor: '#ffd400',
   backgroundColor: '#101826',
   durationSeconds: 5,
+  logoFile: '',
   ratio: '9:16',
 };
 
@@ -27,6 +29,7 @@ export const normalizeKinetic = (props: Partial<KineticTitleProps>): KineticTitl
   ...kineticTitleDefaults,
   ...props,
   durationSeconds: clamp(props.durationSeconds as number, 2, 20, kineticTitleDefaults.durationSeconds),
+  logoFile: typeof props.logoFile === 'string' && /^[A-Za-z0-9][A-Za-z0-9_./-]{0,119}$/.test(props.logoFile) && !props.logoFile.split('/').includes('..') ? props.logoFile : '',
   ratio: safeRatio(props.ratio),
 });
 
@@ -60,6 +63,7 @@ export const KineticTitle: React.FC<KineticTitleProps> = (input) => {
       <AbsoluteFill
         style={{justifyContent: 'center', alignItems: 'center', padding: 90 * unit, textAlign: 'center'}}
       >
+        {p.logoFile ? <Img src={staticFile(p.logoFile)} style={{width: 180 * unit, height: 180 * unit, objectFit: 'contain', marginBottom: 34 * unit}} /> : null}
         <div style={{fontSize, fontWeight: 900, lineHeight: 1.12, color: p.textColor}}>
           {words.map((word, i) => {
             const s = spring({frame: frame - i * 5, fps, config: {damping: 12, stiffness: 120}});

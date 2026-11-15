@@ -12,7 +12,8 @@ import {lineIndexer, tokenize} from './lexer.js';
 export const MAX_CODE_CHARS = 100000;
 export const MAX_PROPS_CHARS = 20000;
 
-// Hanya paket ini yang terpasang di runner render (lihat README, bagian Kode kustom).
+// Hanya paket ini yang terpasang di runner render. API aset Remotion yang didukung:
+// Img, Audio, staticFile; staticFile wajib memakai path relatif literal dari public/.
 const ALLOWED_PACKAGES = new Set(['react', 'remotion']);
 const MAX_ISSUES = 50;
 const OPEN = '([{';
@@ -184,7 +185,21 @@ export function checkCode(code) {
     }
   }
 
-  // 7) Heuristik JSX/React: bergantung pada konfigurasi transform runner, jadi hanya peringatan.
+  // 7) Path staticFile harus literal dan relatif dari public/ (bukan URL atau traversal).
+  for (let k = 0; k < sig.length; k++) {
+    if (!isWord(sig[k], 'staticFile') || !isPunct(sig[k + 1], '(')) continue;
+    const arg = sig[k + 2];
+    if (!arg || arg.type !== 'string' || arg.unterminated) {
+      add('warn', "staticFile() sebaiknya memakai string literal path dari daftar aset public/.", sig[k].start);
+      continue;
+    }
+    const path = text(arg).slice(1, -1);
+    if (!path || path.startsWith('/') || path.includes('..') || /^[a-z]+:/i.test(path) || path.includes('\\\\')) {
+      add('error', 'Path staticFile() harus relatif, tanpa .., URL, atau garis miring awal.', arg.start);
+    }
+  }
+
+  // 8) Heuristik JSX/React: bergantung pada konfigurasi transform runner, jadi hanya peringatan.
   const firstTag = sig.find((t) => t.type === 'tag');
   if (firstTag && !sig.some((t) => isWord(t, 'React'))) {
     add('warn', "Ada JSX tetapi 'React' tidak diimpor. Bila render gagal, tambahkan: import React from 'react';", firstTag.start);
