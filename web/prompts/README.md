@@ -42,7 +42,7 @@ Tidak perlu mengubah `index.html`, `prompt-library.js`, atau CSS.
 
 ## Aset lokal untuk prompt
 
-Untuk kode kustom, aset statis disimpan di `remotion/public/`. Isi `ASET_TERSEDIA` dengan path relatif yang benar-benar ada, misalnya `logo/sample-mark.svg`. Gunakan `Img`/`Audio` dengan `staticFile('logo/sample-mark.svg')`; font lokal dapat dimuat lewat `@font-face` dan `staticFile()`. Jangan menebak path. Jika aset tidak tersedia, AI wajib membuat fallback geometri/SVG.
+Aset statis disimpan di `remotion/public/` dan dipanggil melalui `staticFile()`. URL gambar eksternal hanya boleh dipakai lewat `<Img>` dari `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, HTTPS, URL literal, dan `onError` dengan fallback geometri/SVG. URL audio/video dan `fetch()` tetap dilarang. `fetch`, URL audio/video, dan elemen `<img>` dilarang. Sinkronkan domain pada Worker, code-check, dan prompt.
 
 ## Prompt tersedia
 

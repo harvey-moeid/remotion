@@ -14,7 +14,7 @@
 - CTA: [contoh: Pesan lewat link di bio]
 - WARNA_BRAND: [primer #RRGGBB, sekunder #RRGGBB, aksen #RRGGBB]
 - FONT: [contoh: Space Grotesk untuk judul, DM Sans untuk isi]
-- ASET_TERSEDIA: [path file di remotion/public/, mis. logo/sample-mark.svg atau audio/brand.mp3; atau tidak ada]
+- ASET_TERSEDIA: [path file di remotion/public/ dan/atau URL gambar dari images.unsplash.com, images.pexels.com, cdn.pixabay.com; atau tidak ada]
 
 ## PERAN
 
@@ -30,7 +30,7 @@ Buat satu komposisi Remotion (React + TypeScript) untuk video promosi **NAMA_PRO
 - Satu file komposisi, ekspor default berupa komponen React.
 - Sertakan `export const config = { durationInFrames: 600, fps: 30, width: 1080, height: 1920 }`.
 - Hanya gunakan API Remotion: `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Sequence`, `AbsoluteFill`, `Easing`, `Img`, `Audio`, `staticFile`.
-- Aset lokal hanya dari `remotion/public/` melalui `staticFile()` dan harus tercantum di ASET_TERSEDIA; jangan menebak path. Jika file tidak tersedia, gunakan geometri sebagai fallback.
+- Aset lokal hanya dari `remotion/public/` melalui `staticFile()` dan harus tercantum di ASET_TERSEDIA. URL gambar hanya lewat `<Img src="https://..." onError={...} />` dari host allowlist; wajib fallback. URL audio/video dan `fetch` dilarang.
 - Tanpa aset eksternal, tanpa request jaringan, tanpa `Math.random()` (animasi harus deterministik; jika perlu variasi, gunakan nilai dari frame).
 - Semua teks aman dari pemotongan: simpan teks dalam area aman 90 px dari tepi kiri/kanan dan 220 px dari atas/bawah (area UI TikTok/Reels).
 - Ukuran teks minimal 56 px untuk isi dan 96 px untuk judul agar terbaca di ponsel.

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {FONT_STACK, Ratio, clamp, safeRatio} from '../lib/ratio';
 import {withAlpha} from '../lib/color';
@@ -11,6 +11,7 @@ export type KineticTitleProps = {
   backgroundColor: string;
   durationSeconds: number;
   logoFile: string;
+  imageUrl: string;
   ratio: Ratio;
 };
 
@@ -22,6 +23,7 @@ export const kineticTitleDefaults: KineticTitleProps = {
   backgroundColor: '#101826',
   durationSeconds: 5,
   logoFile: '',
+  imageUrl: '',
   ratio: '9:16',
 };
 
@@ -30,6 +32,7 @@ export const normalizeKinetic = (props: Partial<KineticTitleProps>): KineticTitl
   ...props,
   durationSeconds: clamp(props.durationSeconds as number, 2, 20, kineticTitleDefaults.durationSeconds),
   logoFile: typeof props.logoFile === 'string' && /^[A-Za-z0-9][A-Za-z0-9_./-]{0,119}$/.test(props.logoFile) && !props.logoFile.split('/').includes('..') ? props.logoFile : '',
+  imageUrl: typeof props.imageUrl === 'string' ? props.imageUrl.slice(0, 2048) : '',
   ratio: safeRatio(props.ratio),
 });
 
@@ -40,6 +43,8 @@ export const KineticTitle: React.FC<KineticTitleProps> = (input) => {
 
   const unit = Math.min(width, height) / 1080;
   const portrait = height > width;
+  const [assetFailed, setAssetFailed] = useState(false);
+  const imageSource = p.imageUrl || (p.logoFile ? staticFile(p.logoFile) : '');
   const words = (p.title.trim() || kineticTitleDefaults.title).split(' ').filter(Boolean);
   const fontSize = (words.length > 8 ? 96 : words.length > 4 ? 124 : 156) * unit * (portrait ? 1 : 0.92);
 
@@ -63,7 +68,7 @@ export const KineticTitle: React.FC<KineticTitleProps> = (input) => {
       <AbsoluteFill
         style={{justifyContent: 'center', alignItems: 'center', padding: 90 * unit, textAlign: 'center'}}
       >
-        {p.logoFile ? <Img src={staticFile(p.logoFile)} style={{width: 180 * unit, height: 180 * unit, objectFit: 'contain', marginBottom: 34 * unit}} /> : null}
+        {imageSource && !assetFailed ? <Img src={imageSource} onError={() => setAssetFailed(true)} style={{width: 180 * unit, height: 180 * unit, objectFit: 'contain', marginBottom: 34 * unit}} /> : <div style={{width: 180 * unit, height: 180 * unit, marginBottom: 34 * unit, border: `2px solid ${p.accentColor}`, borderRadius: 28 * unit, opacity: 0.45, display: 'grid', placeItems: 'center', color: p.accentColor, fontSize: 56 * unit}}>✦</div>}
         <div style={{fontSize, fontWeight: 900, lineHeight: 1.12, color: p.textColor}}>
           {words.map((word, i) => {
             const s = spring({frame: frame - i * 5, fps, config: {damping: 12, stiffness: 120}});

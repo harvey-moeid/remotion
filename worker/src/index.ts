@@ -14,6 +14,7 @@ type Bindings = {
   ALLOWED_ORIGINS: string;
   MAX_RENDERS_PER_DAY: string;
   RETENTION_DAYS: string;
+  ALLOWED_IMAGE_HOSTS: string;
 };
 
 type Ctx = Context<{Bindings: Bindings}>;
@@ -40,6 +41,7 @@ const RATIOS = ['9:16', '16:9'];
 const MAX_PROPS_CHARS = 20_000;
 const MAX_UPLOAD_BYTES = 90 * 1024 * 1024;
 const MAX_THUMB_BYTES = 2 * 1024 * 1024;
+const MAX_IMAGE_URL_LENGTH = 2048;
 const JOB_TTL_SECONDS = 7 * 24 * 3600;
 
 // Template kode kustom: kode pengguna disimpan sementara di KV, lalu diambil oleh GitHub Actions.
@@ -47,6 +49,33 @@ const CUSTOM_TEMPLATE = 'CustomCode';
 const MAX_CODE_CHARS = 100_000;
 const CODE_TTL_SECONDS = 24 * 3600;
 
+function isAllowedImageUrl(value: unknown, env: Bindings): boolean {
+  if (typeof value !== 'string' || !value || value.length > MAX_IMAGE_URL_LENGTH) return false;
+  try {
+    const url = new URL(value), host = url.hostname.toLowerCase();
+    const allowed = (env.ALLOWED_IMAGE_HOSTS ?? '').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean);
+    const isIp = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.localhost');
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port && !isIp && allowed.includes(host);
+  } catch { return false; }
+}
+function validateCustomImageSources(code: string, env: Bindings): string | null {
+  if (/\bfetch\s*\(/.test(code)) return 'fetch() tidak diizinkan; gunakan <Img> dengan URL gambar allowlist.';
+  if (/<img\b/.test(code)) return 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.';
+  for (const match of code.matchAll(/<Img\b([^>]*)>/gs)) {
+    const attrs = match[1];
+    const src = /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*staticFile\(\s*(['"])(.*?)\3\s*\)\s*\})/.exec(attrs);
+    if (!src) return '<Img> wajib memakai URL literal allowlist atau staticFile() dengan path literal.';
+    const value = src[1] ?? src[2] ?? src[4] ?? '';
+    if (/^https?:\/\//i.test(value)) {
+      if (!isAllowedImageUrl(value, env)) return 'URL gambar harus HTTPS dan host-nya ada di ALLOWED_IMAGE_HOSTS.';
+      if (!/\bonError\s*=/.test(attrs)) return 'Setiap <Img> dari URL wajib memiliki onError dan fallback visual.';
+    } else if (src[4] === undefined || !value || value.startsWith('/') || value.includes('..')) {
+      return 'Aset lokal <Img> wajib memakai staticFile() dengan path relatif tanpa .. .';
+    }
+  }
+  if (/<Audio\b[^>]*src\s*=\s*["']https?:\/\//i.test(code)) return 'Audio eksternal tidak diizinkan; gunakan staticFile() untuk audio lokal.';
+  return null;
+}
 const app = new Hono<{Bindings: Bindings}>();
 
 // CORS: hanya origin yang terdaftar di ALLOWED_ORIGINS.
@@ -122,10 +151,11 @@ app.post('/api/render', async (c) => {
   if (typeof ratio !== 'string' || !RATIOS.includes(ratio)) {
     return c.json({error: 'ratio harus 9:16 atau 16:9'}, 400);
   }
-  const props = body.props ?? {};
+  const props = (body.props ?? {}) as Record<string, unknown>;
   if (typeof props !== 'object' || props === null || Array.isArray(props)) {
     return c.json({error: 'props harus berupa object'}, 400);
   }
+  if (Object.prototype.hasOwnProperty.call(props, 'imageUrl') && props.imageUrl !== '' && !isAllowedImageUrl(props.imageUrl, c.env)) return c.json({error: 'URL gambar harus HTTPS dan berasal dari domain yang diizinkan'}, 400);
   const propsJson = JSON.stringify(props);
   if (propsJson.length > MAX_PROPS_CHARS) {
     return c.json({error: 'props terlalu besar'}, 413);
@@ -149,6 +179,8 @@ app.post('/api/render', async (c) => {
     if (!/export\s+default\b/.test(body.code)) {
       return c.json({error: 'kode harus punya export default (komponen React)'}, 400);
     }
+    const assetError = validateCustomImageSources(body.code, c.env);
+    if (assetError) return c.json({error: assetError}, 400);
     code = body.code;
   }
 
