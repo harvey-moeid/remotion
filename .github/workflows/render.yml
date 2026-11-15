@@ -86,9 +86,9 @@ jobs:
 
       - name: Cek sintaks frontend statis
         run: |
-          node --input-type=module --check < web/asset-library.js
-          node --input-type=module --check < web/app.js
-          node --input-type=module --check < web/code-check.js
+          node --input-type=module --check < ../web/asset-library.js
+          node --input-type=module --check < ../web/app.js
+          node --input-type=module --check < ../web/code-check.js
 
       - name: Pasang library sistem untuk Chrome headless
         run: |
