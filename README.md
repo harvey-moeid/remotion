@@ -120,9 +120,13 @@ GitHub repo > Settings > Secrets and variables > Actions > New repository secret
 
 `deploy.yml` otomatis menyalin `UPLOAD_TOKEN` dan `DISPATCH_TOKEN` ke secret Worker, jadi tidak ada secret di repo.
 
+## URL gambar (Tahap 2)
+
+Field `URL gambar` pada template Judul Kinetik menerima HTTPS dari host persis `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`. Worker memvalidasi URL; URL HTTP, IP/localhost, port eksplisit, kredensial, dan host lain ditolak. Kode kustom hanya boleh memuat URL gambar literal melalui `<Img src="https://..." onError={...} />` dari host tersebut dan wajib menampilkan fallback. `fetch()`, elemen `<img>`, URL audio, dan URL video tidak diizinkan. Daftar domain disinkronkan di `worker/wrangler.toml`, `web/code-check.js`, dan prompt.
+
 ## Aset statis (Tahap 1)
 
-Simpan aset yang ikut repository di `remotion/public/` dengan folder `logo/`, `audio/`, atau `fonts/`. Nama file harus deskriptif dan stabil; hindari spasi, huruf besar, dan nama duplikat. Di kode kustom gunakan `Img`/`Audio` dari `remotion` dan `staticFile('folder/nama-file.ext')`. Font lokal dapat dimuat memakai `@font-face` dengan URL dari `staticFile()`. Path harus relatif dari `public/`, sesuai daftar aset, dan tidak boleh ditebak. Template Judul Kinetik menyediakan field opsional `logoFile`; kosongkan untuk tampilan lama atau isi `logo/sample-mark.svg` untuk contoh. Aset yang tidak tersedia harus diganti fallback geometri.
+Simpan aset yang ikut repository di `remotion/public/` dengan folder `logo/`, `audio/`, atau `fonts/`. Nama file harus deskriptif dan stabil; hindari spasi, huruf besar, dan nama duplikat. Di kode kustom gunakan `Img`/`Audio` dari `remotion` dan `staticFile('folder/nama-file.ext')`. Font lokal dapat dimuat memakai `@font-face` dengan URL dari `staticFile()`. Path harus relatif dari `public/`, sesuai daftar aset, dan tidak boleh ditebak. Template Judul Kinetik menyediakan field opsional `logoFile` dan `imageUrl`; URL gambar harus HTTPS dari allowlist `images.unsplash.com`, `images.pexels.com`, `cdn.pixabay.com`. Jika gagal, komposisi menampilkan fallback geometris. Kode kustom boleh memakai URL gambar hanya lewat `<Img>` literal dengan `onError` dan fallback; `fetch`, URL audio/video, dan elemen `<img>` dilarang.
 
 ## Menambah template baru
 

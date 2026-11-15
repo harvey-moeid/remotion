@@ -16,6 +16,15 @@ export const MAX_PROPS_CHARS = 20000;
 // Img, Audio, staticFile; staticFile wajib memakai path relatif literal dari public/.
 const ALLOWED_PACKAGES = new Set(['react', 'remotion']);
 const MAX_ISSUES = 50;
+// Harus sama dengan ALLOWED_IMAGE_HOSTS di worker/wrangler.toml.
+export const ALLOWED_IMAGE_HOSTS = ['images.unsplash.com', 'images.pexels.com', 'cdn.pixabay.com'];
+export function isAllowedImageUrl(value) {
+  if (typeof value !== 'string' || !value || value.length > 2048) return false;
+  try { const url = new URL(value), host = url.hostname.toLowerCase();
+    const isIp = /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.localhost');
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port && !isIp && ALLOWED_IMAGE_HOSTS.includes(host);
+  } catch { return false; }
+}
 const OPEN = '([{';
 const CLOSE = ')]}';
 const PAIR = {')': '(', ']': '[', '}': '{'};
@@ -181,7 +190,7 @@ export function checkCode(code) {
     } else if (!afterDot && (word === 'setTimeout' || word === 'setInterval' || word === 'requestAnimationFrame')) {
       add('warn', `${word} tidak sinkron dengan frame video. Gunakan useCurrentFrame() atau <Sequence>.`, t.start);
     } else if (!afterDot && word === 'fetch' && isPunct(sig[k + 1], '(')) {
-      add('warn', 'Permintaan jaringan saat render bisa gagal atau lambat; bungkus dengan delayRender/continueRender.', t.start);
+      add('error', 'fetch() tidak diizinkan; gunakan <Img> dengan URL gambar allowlist dan fallback.', t.start);
     }
   }
 
@@ -199,7 +208,20 @@ export function checkCode(code) {
     }
   }
 
-  // 8) Heuristik JSX/React: bergantung pada konfigurasi transform runner, jadi hanya peringatan.
+  // 8) URL gambar di kode kustom: URL literal allowlist, <Img>, dan onError fallback.
+  for (const match of code.matchAll(/<Img\\b([^>]*)>/gs)) {
+    const attrs = match[1];
+    const src = /(?:^|\\s)src\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|\\{\\s*staticFile\\(\\s*(['\"])(.*?)\\3\\s*\\)\\s*\\})/.exec(attrs);
+    if (!src) { add('error', '<Img> wajib memakai URL literal allowlist atau staticFile() dengan path literal.', match.index || 0); continue; }
+    const value = src[1] ?? src[2] ?? src[4] ?? '';
+    if (/^https?:\\/\\//i.test(value)) {
+      if (!isAllowedImageUrl(value)) add('error', 'URL gambar harus HTTPS dari domain allowlist.', match.index || 0);
+      if (!/\\bonError\\s*=/.test(attrs)) add('error', 'Gambar dari URL wajib memiliki onError dan fallback visual.', match.index || 0);
+    } else if (src[4] === undefined || !value || value.startsWith('/') || value.includes('..')) add('error', 'Aset lokal <Img> wajib memakai staticFile() dengan path relatif tanpa .. .', match.index || 0);
+  }
+  if (/<img\\b/i.test(code)) add('error', 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.', 0);
+
+  // 9) Heuristik JSX/React: bergantung pada konfigurasi transform runner, jadi hanya peringatan.
   const firstTag = sig.find((t) => t.type === 'tag');
   if (firstTag && !sig.some((t) => isWord(t, 'React'))) {
     add('warn', "Ada JSX tetapi 'React' tidak diimpor. Bila render gagal, tambahkan: import React from 'react';", firstTag.start);
@@ -231,6 +253,8 @@ export function checkBuiltin(template, values, props) {
       if (!/^#[0-9a-fA-F]{6}$/.test(String(value))) error(`${field.label} bukan warna yang valid.`);
     }
   }
+
+  if (props && typeof props.imageUrl === 'string' && props.imageUrl.trim() && !isAllowedImageUrl(props.imageUrl.trim())) error('URL gambar harus HTTPS dari domain allowlist.');
 
   // preview() mengembalikan judul / slide pertama; kosong berarti konten belum diisi.
   if (!String(template.preview(values) || '').trim()) {

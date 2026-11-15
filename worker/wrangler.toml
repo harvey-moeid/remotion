@@ -11,6 +11,7 @@ WORKFLOW_FILE = 'render.yml'
 ALLOWED_ORIGINS = 'https://remotion-studio.pages.dev,https://remotion.muidsoft.com'
 MAX_RENDERS_PER_DAY = '50'
 RETENTION_DAYS = '7'
+ALLOWED_IMAGE_HOSTS = 'images.unsplash.com,images.pexels.com,cdn.pixabay.com'
 
 [[kv_namespaces]]
 binding = 'JOBS'

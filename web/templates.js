@@ -57,6 +57,7 @@ export const TEMPLATES = [
       {key: 'accentColor', label: 'Warna aksen', type: 'color', default: '#ffd400'},
       {key: 'backgroundColor', label: 'Warna latar', type: 'color', default: '#101826'},
       {key: 'logoFile', label: 'File logo di public/ (opsional)', type: 'text', default: ''},
+      {key: 'imageUrl', label: 'URL gambar (domain diizinkan; opsional)', type: 'text', default: ''},
       {key: 'durationSeconds', label: 'Durasi (detik)', type: 'number', default: 5, min: 2, max: 20, step: 1},
     ],
     preview: (v) => v.title,
