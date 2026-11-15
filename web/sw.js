@@ -50,6 +50,7 @@ const CORE_ASSETS = [
   'code-check.js',
   'prompt-library.js',
   'pwa.js',
+  'mobile-dock.js',
   PROMPT_INDEX,
   'icons/icon-192.png',
   'icons/icon-512.png',
