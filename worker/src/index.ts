@@ -63,6 +63,10 @@ function isAllowedImageUrl(value: unknown, env: Bindings): boolean {
 function validateCustomImageSources(code: string, env: Bindings): string | null {
   if (/\bfetch\s*\(/.test(code)) return 'fetch() tidak diizinkan; gunakan <Img> dengan URL gambar allowlist.';
   if (/<img\b/.test(code)) return 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.';
+  if (/<(?:OffthreadVideo|video)\b/i.test(code)) return 'Video eksternal/lokal tidak termasuk jenis aset yang diaktifkan.';
+  if (/\b(?:XMLHttpRequest|WebSocket|EventSource)\b|new\s+Image\s*\(/.test(code)) return 'API jaringan alternatif tidak diizinkan; URL eksternal hanya melalui <Img>.';
+
+  const allowedUrlRanges: Array<[number, number]> = [];
   for (const match of code.matchAll(/<Img\b([^>]*)>/gs)) {
     const attrs = match[1];
     const src = /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*staticFile\(\s*(['"])(.*?)\3\s*\)\s*\})/.exec(attrs);
@@ -71,11 +75,25 @@ function validateCustomImageSources(code: string, env: Bindings): string | null 
     if (/^https?:\/\//i.test(value)) {
       if (!isAllowedImageUrl(value, env)) return 'URL gambar harus HTTPS dan host-nya ada di ALLOWED_IMAGE_HOSTS.';
       if (!/\bonError\s*=/.test(attrs)) return 'Setiap <Img> dari URL wajib memiliki onError dan fallback visual.';
+      const tagStart = match.index ?? 0;
+      const urlOffset = match[0].indexOf(value);
+      allowedUrlRanges.push([tagStart + urlOffset, tagStart + urlOffset + value.length]);
     } else if (src[4] === undefined || !value || value.startsWith('/') || value.includes('..')) {
       return 'Aset lokal <Img> wajib memakai staticFile() dengan path relatif tanpa .. .';
     }
   }
-  if (/<Audio\b[^>]*src\s*=\s*["']https?:\/\//i.test(code)) return 'Audio eksternal tidak diizinkan; gunakan staticFile() untuk audio lokal.';
+
+  for (const match of code.matchAll(/<Audio\b([^>]*)>/gs)) {
+    const src = /(?:^|\s)src\s*=\s*\{\s*staticFile\(\s*(['"])(.*?)\1\s*\)\s*\}/.exec(match[1]);
+    if (!src || !src[2] || src[2].startsWith('/') || src[2].includes('..')) return '<Audio> wajib memakai staticFile() dengan path lokal literal.';
+  }
+
+  for (const match of code.matchAll(/https?:\/\/[^\s"'\x60<>]+/g)) {
+    const position = match.index ?? 0;
+    if (!allowedUrlRanges.some(([from, to]) => position >= from && position < to)) {
+      return 'URL jaringan hanya boleh berada di src <Img> dan memakai domain allowlist.';
+    }
+  }
   return null;
 }
 type AssetRule = {type: 'image' | 'audio' | 'font'; extension: string; maxBytes: number; mime: string};
