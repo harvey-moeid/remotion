@@ -14,7 +14,7 @@
 - CTA: [opsional — tindakan yang diminta di akhir; kosongkan bila tidak ada]
 - WARNA_BRAND: [primer #RRGGBB, sekunder #RRGGBB, aksen #RRGGBB]
 - FONT: [contoh: Space Grotesk untuk judul, DM Sans untuk isi — maks. 2 font]
-- ASET_TERSEDIA: [logo / foto / tidak ada — jika tidak ada, gunakan bentuk geometri dan teks]
+- ASET_TERSEDIA: [path file yang benar-benar tersedia di remotion/public/, mis. logo/sample-mark.svg; sertakan jenis gambar/audio/font; atau tulis tidak ada]
 
 ## PERAN
 
@@ -50,18 +50,18 @@ Remotion merender setiap frame secara terpisah (bisa paralel), jadi kode harus *
 - Jangan pakai `Math.random()` → pakai `random('seed-string')` dari paket `remotion` (deterministik per seed).
 - Jangan pakai `Date.now()` atau `new Date()` tanpa argumen → pakai `useCurrentFrame()` untuk apa pun yang berubah seiring waktu.
 - Jangan pakai `setTimeout`, `setInterval`, `requestAnimationFrame` → animasikan lewat `useCurrentFrame()` / `<Sequence>`, bukan timer.
-- Jangan `fetch` data saat render (tidak ada jaringan yang andal di runner) — semua konten harus sudah ada di dalam kode/variabel.
+- Jangan `fetch` data saat render (tidak ada jaringan yang andal di runner). Aset lokal harus sudah ada di `remotion/public/` dan dipanggil memakai `staticFile('folder/nama-file.ext')`; jangan menebak nama/path yang tidak tercantum di ASET_TERSEDIA.
 - Jika ada JSX, wajib `import React from 'react';` di baris pertama.
 - Pakai `useCurrentFrame()` minimal sekali — tanpa itu video akan statis (tidak beranimasi), cuma info tapi biasanya bukan itu yang diinginkan.
 
-**API yang tersedia dari paket `remotion`:** `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Easing`, `Sequence`, `AbsoluteFill`, `random`. Tetap cukup untuk hampir semua video motion-graphics teks + bentuk geometri.
+**API yang tersedia dari paket `remotion`:** `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Easing`, `Sequence`, `AbsoluteFill`, `random`, `Img`, `Audio`, `staticFile`. Gunakan `Img` untuk gambar dan `Audio` untuk audio; sumbernya wajib `staticFile()` dengan path relatif dari `remotion/public/`. Untuk font lokal, gunakan `@font-face` dalam elemen `<style>` dan URL `staticFile('fonts/nama-font.woff2')`. Tidak ada video eksternal pada tahap ini.
 
 ## ART DIRECTION
 
 - Satu ide visual per adegan. Hierarki jelas: elemen utama besar, pendukung kecil.
 - Gunakan WARNA_BRAND secara konsisten: latar primer, teks kontras, aksen untuk angka/CTA/penekanan.
 - Maksimal dua font (FONT). Jangan mengarang klaim, angka, atau testimoni yang tidak ada di variabel.
-- Jika ASET_TERSEDIA kosong, bangun visual dari bentuk geometri, gradien lembut, dan SVG inline sederhana.
+- Jika ASET_TERSEDIA kosong atau file tidak ada dalam daftar aset yang diberikan, bangun visual dari bentuk geometri, gradien lembut, dan SVG inline sederhana. Jangan membuat path file sendiri.
 - **Area aman teks** (penting bila RATIO = 9:16, karena UI TikTok/Reels/Shorts menutupi tepi layar): jaga semua teks minimal 90 px dari tepi kiri/kanan dan 220 px dari atas/bawah. Untuk 16:9, cukup beri margin wajar (≥ 60 px) karena tidak ada overlay UI platform.
 - Ukuran teks minimal ±56 px untuk isi dan ±96 px untuk judul pada kanvas 1080×1920 (sesuaikan proporsional bila 16:9), agar terbaca di layar kecil.
 
@@ -99,6 +99,7 @@ Bila CTA kosong, hilangkan adegan CTA dan alihkan porsinya ke adegan ISI.
    - [ ] `useCurrentFrame()` dipakai minimal sekali
    - [ ] Total frame seluruh `Sequence` = `durationInFrames` = DURASI_DETIK × 30, dan berada di rentang 1–1800
    - [ ] Teks berada di dalam area aman (90 px kiri/kanan, 220 px atas/bawah bila 9:16)
+   - [ ] Aset hanya dipanggil lewat `staticFile()` dengan nama file yang tercantum di ASET_TERSEDIA; jika tidak tersedia, fallback visual tetap ada
    - [ ] Tidak ada klaim/angka yang dikarang di luar variabel
 
 ## BATASAN

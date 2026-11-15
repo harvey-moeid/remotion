@@ -40,9 +40,13 @@ Tombol **Edit prompt** pada kartu membuka panel editor:
 
 Tidak perlu mengubah `index.html`, `prompt-library.js`, atau CSS.
 
+## Aset lokal untuk prompt
+
+Untuk kode kustom, aset statis disimpan di `remotion/public/`. Isi `ASET_TERSEDIA` dengan path relatif yang benar-benar ada, misalnya `logo/sample-mark.svg`. Gunakan `Img`/`Audio` dengan `staticFile('logo/sample-mark.svg')`; font lokal dapat dimuat lewat `@font-face` dan `staticFile()`. Jangan menebak path. Jika aset tidak tersedia, AI wajib membuat fallback geometri/SVG.
+
 ## Prompt tersedia
 
 - `cinematic-tarot-remotion.md` — video tarot 30 detik (9:16). Tanpa variabel; edit lewat textarea.
-- `product-promo-remotion.md` — promosi produk/jasa 20 detik (9:16), umum dan tidak terkait tarot. Pilihan cepat: audiens, CTA, warna, font, aset.
+- `product-promo-remotion.md` — promosi produk/jasa 20 detik (9:16), umum dan tidak terkait tarot. Pilihan cepat: audiens, CTA, warna, font, aset lokal.
 - `edukasi-remotion.md` — micro-lesson edukasi 30 detik (9:16): pertanyaan, 3 poin kunci, contoh, kuis. Pilihan cepat: target pelajar, warna, font.
-- `universal-remotion.md` — topik bebas, durasi (1–60 detik) dan rasio (9:16/16:9) fleksibel. Menjelaskan persis kontrak file CustomCode dan pengecekan otomatis (error vs peringatan) agar kode yang dihasilkan AI lolos pada percobaan pertama. Pilihan cepat: rasio, warna, font, aset.
+- `universal-remotion.md` — topik bebas, durasi (1–60 detik) dan rasio (9:16/16:9) fleksibel. Menjelaskan persis kontrak file CustomCode dan pengecekan otomatis (error vs peringatan) agar kode yang dihasilkan AI lolos pada percobaan pertama. Pilihan cepat: rasio, warna, font, aset lokal.

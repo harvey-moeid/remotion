@@ -14,7 +14,7 @@
 - CTA: [contoh: Pesan lewat link di bio]
 - WARNA_BRAND: [primer #RRGGBB, sekunder #RRGGBB, aksen #RRGGBB]
 - FONT: [contoh: Space Grotesk untuk judul, DM Sans untuk isi]
-- ASET_TERSEDIA: [logo / foto produk / tidak ada — jika tidak ada, gunakan bentuk geometri dan teks]
+- ASET_TERSEDIA: [path file di remotion/public/, mis. logo/sample-mark.svg atau audio/brand.mp3; atau tidak ada]
 
 ## PERAN
 
@@ -29,7 +29,8 @@ Buat satu komposisi Remotion (React + TypeScript) untuk video promosi **NAMA_PRO
 - Rasio 9:16, resolusi 1080 × 1920, 30 FPS, durasi 20 detik (600 frame).
 - Satu file komposisi, ekspor default berupa komponen React.
 - Sertakan `export const config = { durationInFrames: 600, fps: 30, width: 1080, height: 1920 }`.
-- Hanya gunakan API Remotion: `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Sequence`, `AbsoluteFill`, `Easing`.
+- Hanya gunakan API Remotion: `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Sequence`, `AbsoluteFill`, `Easing`, `Img`, `Audio`, `staticFile`.
+- Aset lokal hanya dari `remotion/public/` melalui `staticFile()` dan harus tercantum di ASET_TERSEDIA; jangan menebak path. Jika file tidak tersedia, gunakan geometri sebagai fallback.
 - Tanpa aset eksternal, tanpa request jaringan, tanpa `Math.random()` (animasi harus deterministik; jika perlu variasi, gunakan nilai dari frame).
 - Semua teks aman dari pemotongan: simpan teks dalam area aman 90 px dari tepi kiri/kanan dan 220 px dari atas/bawah (area UI TikTok/Reels).
 - Ukuran teks minimal 56 px untuk isi dan 96 px untuk judul agar terbaca di ponsel.
@@ -39,7 +40,7 @@ Buat satu komposisi Remotion (React + TypeScript) untuk video promosi **NAMA_PRO
 - Gaya: bersih, kontras tinggi, modern. Satu ide visual per adegan.
 - Gunakan WARNA_BRAND secara konsisten: latar primer, teks kontras, aksen untuk angka dan CTA.
 - Maksimal dua font (lihat FONT). Hierarki jelas: judul besar, subteks kecil.
-- Jika ASET_TERSEDIA kosong, buat visual dari bentuk geometri, gradien lembut, dan ikon sederhana berbasis SVG.
+- Jika ASET_TERSEDIA kosong atau file tidak ada di daftar aset, buat visual dari bentuk geometri, gradien lembut, dan ikon sederhana berbasis SVG.
 - Jangan gunakan klaim yang tidak ada di variabel. Jangan mengarang angka, ulasan, atau testimoni.
 
 ## STORYBOARD (20 detik)

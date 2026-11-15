@@ -6,20 +6,38 @@
       "file": "cinematic-tarot-remotion.md",
       "download": "MASTER-PROMPT-CINEMATIC-TAROT-REMOTION.md",
       "icon": "✧",
-      "tags": ["JALUR TAROT", "REMOTION", "MASTER PROMPT"],
+      "tags": [
+        "JALUR TAROT",
+        "REMOTION",
+        "MASTER PROMPT"
+      ],
       "title": "Cinematic Tarot Video",
       "description": "Prompt lengkap untuk membuat video TikTok “Pesan Semesta Hari Ini — Pick a Card” dengan art direction sinematik, storyboard 30 detik, motion design, dan aturan teknis Remotion.",
-      "specs": ["9:16", "30 detik", "1080 × 1920", "30 FPS"]
+      "specs": [
+        "9:16",
+        "30 detik",
+        "1080 × 1920",
+        "30 FPS"
+      ]
     },
     {
       "id": "product-promo",
       "file": "product-promo-remotion.md",
       "download": "MASTER-PROMPT-PRODUCT-PROMO-REMOTION.md",
       "icon": "▶",
-      "tags": ["PRODUK / UMKM", "REMOTION", "MASTER PROMPT"],
+      "tags": [
+        "PRODUK / UMKM",
+        "REMOTION",
+        "MASTER PROMPT"
+      ],
       "title": "Product Promo Video",
       "description": "Prompt serbaguna untuk video promosi produk atau jasa: hook 3 detik, manfaat utama, bukti sosial, dan call-to-action. Cukup isi variabel di awal prompt (nama produk, harga, CTA, warna brand).",
-      "specs": ["9:16", "20 detik", "1080 × 1920", "30 FPS"],
+      "specs": [
+        "9:16",
+        "20 detik",
+        "1080 × 1920",
+        "30 FPS"
+      ],
       "choices": {
         "TARGET_AUDIENS": [
           "pekerja kantoran 22–35 tahun",
@@ -46,8 +64,8 @@
         ],
         "ASET_TERSEDIA": [
           "tidak ada — gunakan bentuk geometri dan teks",
-          "logo saja",
-          "logo dan foto produk"
+          "logo/sample-mark.svg",
+          "logo/sample-mark.svg; audio/brand-theme.mp3"
         ]
       }
     },
@@ -56,10 +74,19 @@
       "file": "edukasi-remotion.md",
       "download": "MASTER-PROMPT-EDUKASI-REMOTION.md",
       "icon": "✎",
-      "tags": ["EDUKASI", "REMOTION", "MASTER PROMPT"],
+      "tags": [
+        "EDUKASI",
+        "REMOTION",
+        "MASTER PROMPT"
+      ],
       "title": "Edukasi / Micro-Lesson",
       "description": "Prompt untuk video belajar singkat satu topik: pertanyaan pembuka, tujuan belajar, tiga poin kunci dengan diagram SVG, contoh sehari-hari, dan kuis penutup. Menekankan akurasi dan jeda baca.",
-      "specs": ["9:16", "30 detik", "1080 × 1920", "30 FPS"],
+      "specs": [
+        "9:16",
+        "30 detik",
+        "1080 × 1920",
+        "30 FPS"
+      ],
       "choices": {
         "TARGET_PELAJAR": [
           "siswa SD kelas 4–6",
@@ -85,12 +112,24 @@
       "file": "universal-remotion.md",
       "download": "MASTER-PROMPT-UNIVERSAL-REMOTION.md",
       "icon": "⚙",
-      "tags": ["UNIVERSAL", "REMOTION", "MASTER PROMPT"],
+      "tags": [
+        "UNIVERSAL",
+        "REMOTION",
+        "MASTER PROMPT"
+      ],
       "title": "Universal Video (Topik Bebas)",
       "description": "Prompt untuk topik apa pun di luar tarot/produk/edukasi. Durasi dan rasio fleksibel (dihitung otomatis ke frame/piksel), dan menjelaskan persis aturan kontrak file CustomCode serta pengecekan otomatis (error vs peringatan) agar kode lolos pada percobaan pertama.",
-      "specs": ["9:16 atau 16:9", "1–60 detik", "1080 × 1920 / 1920 × 1080", "30 FPS"],
+      "specs": [
+        "9:16 atau 16:9",
+        "1–60 detik",
+        "1080 × 1920 / 1920 × 1080",
+        "30 FPS"
+      ],
       "choices": {
-        "RATIO": ["9:16", "16:9"],
+        "RATIO": [
+          "9:16",
+          "16:9"
+        ],
         "WARNA_BRAND": [
           "primer #0B1220, sekunder #1E293B, aksen #38BDF8",
           "primer #111111, sekunder #2A2A2A, aksen #FFC107",
@@ -104,8 +143,9 @@
         ],
         "ASET_TERSEDIA": [
           "tidak ada — gunakan bentuk geometri dan teks",
-          "logo saja",
-          "logo dan foto produk"
+          "logo/sample-mark.svg",
+          "audio/brand-theme.mp3",
+          "fonts/brand-font.woff2"
         ]
       }
     }

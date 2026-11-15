@@ -14,6 +14,7 @@
 - KUIS_PENUTUP: [satu pertanyaan + jawaban benar + 2 pilihan salah]
 - WARNA_BRAND: [primer #RRGGBB, sekunder #RRGGBB, aksen #RRGGBB]
 - FONT: [contoh: Space Grotesk untuk judul, DM Sans untuk isi]
+- ASET_TERSEDIA: [path file di remotion/public/ jika ada; atau tidak ada]
 - NAMA_KANAL: [opsional, untuk watermark kecil]
 
 ## PERAN
@@ -36,7 +37,8 @@ Buat satu komposisi Remotion (React + TypeScript) berdurasi 30 detik tentang **T
 - Rasio 9:16, 1080 × 1920, 30 FPS, durasi 30 detik (900 frame).
 - Satu file komposisi, ekspor default berupa komponen React.
 - Sertakan `export const config = { durationInFrames: 900, fps: 30, width: 1080, height: 1920 }`.
-- Hanya gunakan API Remotion: `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Sequence`, `AbsoluteFill`, `Easing`.
+- Hanya gunakan API Remotion: `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Sequence`, `AbsoluteFill`, `Easing`, `Img`, `Audio`, `staticFile`.
+- Aset lokal hanya dari `remotion/public/` melalui `staticFile()` dan harus tercantum di ASET_TERSEDIA; jangan menebak path. Jika file tidak tersedia, gunakan SVG/geometri sebagai fallback.
 - Tanpa aset eksternal, tanpa request jaringan, tanpa `Math.random()` (animasi harus deterministik).
 - Area aman: 90 px dari kiri/kanan dan 220 px dari atas/bawah.
 - Teks isi minimal 56 px, judul minimal 96 px. Kontras teks terhadap latar minimal 4,5 : 1.
