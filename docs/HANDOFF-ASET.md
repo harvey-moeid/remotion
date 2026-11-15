@@ -32,7 +32,7 @@ Kamu bekerja di repo `harvey-moeid/remotion` ("Remotion Studio"): platform video
 
 ### Aturan lintas tahap: prompt dan `code-check.js` harus selalu sejalan
 
-Setiap tahap di bawah mengubah apa yang boleh dilakukan kode kustom. Maka di tahap yang sama, perbarui **keduanya**: `web/code-check.js` (aturan yang memblokir/memperingatkan) dan master prompt (aturan yang diberikan ke AI). Jangan biarkan prompt mengizinkan sesuatu yang diblokir `code-check.js`, atau sebaliknya. Perbarui juga `web/prompts/README.md` bagian "Prompt tersedia" bila deskripsinya berubah.
+Setiap tahap di bawah mengubah apa yang boleh dilakukan kode kustom. Maka di tahap yang sama, perbarui **keduanya**: `web/code-check.js` (aturan yang memblokir/memperingatkan) dan master prompt (aturan yang diberikan ke AI). Jangan biarkan prompt mengizinkan sesuatu yang diblokir `code-check.js`, atau sebaliknya. Perbarui juga `web/prompts/README.md` bagian "Prompt tersedia" bila deskripsinya berubah. Aturan aset/jaringan yang dipakai bersama Worker dan klien (host gambar, batas ukuran, validasi `<Img>`/`<Audio>`/URL) kini hidup di `web/code-rules.js`; ubah di sana, bukan di dua tempat.
 
 ### Rencana bertahap (satu PR per tahap)
 

@@ -7,24 +7,15 @@
 //   info  = catatan saja
 
 import {lineIndexer, tokenize} from './lexer.js';
+import {ALLOWED_IMAGE_HOSTS, MAX_CODE_CHARS, MAX_PROPS_CHARS, findCustomCodeIssues, isAllowedImageUrl} from './code-rules.js';
 
-// Harus sama dengan batas di worker/src/index.ts.
-export const MAX_CODE_CHARS = 100000;
-export const MAX_PROPS_CHARS = 20000;
+// Batas ukuran, daftar host, dan aturan aset/jaringan ditulis SEKALI di code-rules.js dan dipakai juga oleh Worker.
+export {ALLOWED_IMAGE_HOSTS, MAX_CODE_CHARS, MAX_PROPS_CHARS, isAllowedImageUrl};
 
 // Hanya paket ini yang terpasang di runner render. API aset Remotion yang didukung:
 // Img, Audio, staticFile; staticFile wajib memakai path relatif literal dari public/.
 const ALLOWED_PACKAGES = new Set(['react', 'remotion']);
 const MAX_ISSUES = 50;
-// Harus sama dengan ALLOWED_IMAGE_HOSTS di worker/wrangler.toml.
-export const ALLOWED_IMAGE_HOSTS = ['images.unsplash.com', 'images.pexels.com', 'cdn.pixabay.com'];
-export function isAllowedImageUrl(value) {
-  if (typeof value !== 'string' || !value || value.length > 2048) return false;
-  try { const url = new URL(value), host = url.hostname.toLowerCase();
-    const isIp = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.localhost');
-    return url.protocol === 'https:' && !url.username && !url.password && !url.port && !isIp && ALLOWED_IMAGE_HOSTS.includes(host);
-  } catch { return false; }
-}
 const OPEN = '([{';
 const CLOSE = ')]}';
 const PAIR = {')': '(', ']': '[', '}': '{'};
@@ -189,8 +180,6 @@ export function checkCode(code) {
       add('warn', 'new Date() tanpa argumen tidak deterministik saat render. Gunakan useCurrentFrame().', t.start);
     } else if (!afterDot && (word === 'setTimeout' || word === 'setInterval' || word === 'requestAnimationFrame')) {
       add('warn', `${word} tidak sinkron dengan frame video. Gunakan useCurrentFrame() atau <Sequence>.`, t.start);
-    } else if (!afterDot && word === 'fetch' && isPunct(sig[k + 1], '(')) {
-      add('error', 'fetch() tidak diizinkan; gunakan <Img> dengan URL gambar allowlist dan fallback.', t.start);
     }
   }
 
@@ -210,41 +199,8 @@ export function checkCode(code) {
     }
   }
 
-  // 8) URL gambar di kode kustom: URL literal allowlist, <Img>, dan onError fallback.
-  for (const match of code.matchAll(/<Img\b([^>]*)>/gs)) {
-    const attrs = match[1];
-    const src = /(?:^|\s)src\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|\{\s*staticFile\(\s*(['\"])(.*?)\3\s*\)\s*\})/.exec(attrs);
-    if (!src) { add('error', '<Img> wajib memakai URL literal allowlist atau staticFile() dengan path literal.', match.index || 0); continue; }
-    const value = src[1] ?? src[2] ?? src[4] ?? '';
-    if (/^https?:\/\//i.test(value)) {
-      if (!isAllowedImageUrl(value)) add('error', 'URL gambar harus HTTPS dari domain allowlist.', match.index || 0);
-      if (!/\bonError\s*=/.test(attrs)) add('error', 'Gambar dari URL wajib memiliki onError dan fallback visual.', match.index || 0);
-    } else if (src[4] === undefined || !value || value.startsWith('/') || value.includes('..')) add('error', 'Aset lokal <Img> wajib memakai staticFile() dengan path relatif tanpa .. .', match.index || 0);
-  }
-  if (/<img\b/.test(code)) add('error', 'Gunakan komponen <Img> dari remotion, bukan elemen <img>.', 0);
-
-  // URL eksternal hanya boleh pada src <Img> dengan host allowlist dan fallback.
-  if (/<(?:OffthreadVideo|video)\b/i.test(code)) add('error', 'Video tidak termasuk jenis aset yang diaktifkan.', 0);
-  if (/\b(?:XMLHttpRequest|WebSocket|EventSource)\b|new\s+Image\s*\(/.test(code)) add('error', 'API jaringan alternatif tidak diizinkan; URL eksternal hanya melalui <Img>.', 0);
-  const allowedUrlRanges = [];
-  for (const match of code.matchAll(/<Audio\b([^>]*)>/gs)) {
-    const src = /(?:^|\s)src\s*=\s*\{\s*staticFile\(\s*(['"])(.*?)\1\s*\)\s*\}/.exec(match[1]);
-    if (!src || !src[2] || src[2].startsWith('/') || src[2].includes('..')) add('error', '<Audio> wajib memakai staticFile() dengan path lokal literal.', match.index || 0);
-  }
-  for (const match of code.matchAll(/<Img\b([^>]*)>/gs)) {
-    const attrs = match[1];
-    const src = /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*staticFile\(\s*(['"])(.*?)\3\s*\)\s*\})/.exec(attrs);
-    if (!src) continue;
-    const value = src[1] ?? src[2] ?? src[4] ?? '';
-    if (/^https?:\/\//i.test(value)) {
-      const tagStart = match.index || 0;
-      allowedUrlRanges.push([tagStart + match[0].indexOf(value), tagStart + match[0].indexOf(value) + value.length]);
-    }
-  }
-  for (const match of code.matchAll(/https?:\/\/[^\s"'\x60<>]+/g)) {
-    const position = match.index || 0;
-    if (!allowedUrlRanges.some(([from, to]) => position >= from && position < to)) add('error', 'URL jaringan hanya boleh berada di src <Img> dan memakai domain allowlist.', position);
-  }
+  // 8) Aset dan jaringan (fetch, <img>, video, URL, <Img>, <Audio>): aturan yang SAMA dengan Worker, lihat code-rules.js.
+  for (const issue of findCustomCodeIssues(code)) add('error', issue.message, issue.index);
 
   // 9) Heuristik JSX/React: bergantung pada konfigurasi transform runner, jadi hanya peringatan.
   const firstTag = sig.find((t) => t.type === 'tag');
