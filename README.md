@@ -13,6 +13,7 @@ Worker (Hono) --workflow_dispatch--> GitHub Actions (render.yml)
    v
 R2: thumbs/<jobId>.jpg  --> GET /thumbs/<jobId>.jpg (thumbnail riwayat + poster pemutar)
 R2: renders/<jobId>.mp4 --> GET /files/<jobId>.mp4 (pemutar + unduh)
+R2: assets/<tanggal>/<uuid>.<ext> --> signed GET /assets/... (hanya untuk preview/render)
 ```
 
 UI melakukan polling `GET /api/jobs/:id` sampai status `done`, lalu menampilkan pemutar dan link unduh.
@@ -44,6 +45,20 @@ Catatan: `DISPATCH_TOKEN` sudah punya izin **Actions: Read and write**, cukup un
 | `PUT /upload-thumb` | Bearer `UPLOAD_TOKEN` | Unggah thumbnail JPEG |
 | `GET /files/:id.mp4` | publik | Sajikan MP4 (Range, `?download=1`) |
 | `GET /thumbs/:id.jpg` | publik | Sajikan thumbnail |
+| `POST /api/assets` | `X-Access-Code` | Upload aset pribadi ke R2 |
+| `GET /api/assets` | `X-Access-Code` | Daftar aset + URL preview sementara |
+| `GET /assets/:date/:name` | signed HMAC (6 jam) | Unduh aset sementara untuk preview/render |
+
+## Asset Manager (Tahap 3)
+
+Panel **Library aset pribadi** memakai secret Worker `ACCESS_CODE` yang sama dengan fitur Kode kustom; nilainya tidak disimpan di repository. Frontend mengirimnya melalui header `X-Access-Code`, menyimpan input hanya di `sessionStorage` browser, dan tidak memakai `UPLOAD_TOKEN`.
+
+- Jenis yang diterima: gambar PNG/JPEG/WebP maks. **5 MB**; audio MP3/WAV/OGG/AAC maks. **15 MB**; font WOFF/WOFF2/TTF/OTF maks. **2 MB**. Video dan SVG upload tidak diterima.
+- Maksimum **10 upload per hari WIB (Asia/Jakarta)**. Slot kuota dibuat dengan conditional R2 write (`etagDoesNotMatch: '*'`) agar dua upload bersamaan tidak memakai slot yang sama. Tidak perlu KV write untuk penghitung upload.
+- Nama objek dibuat UUID; nama asli hanya disimpan sebagai metadata. Signature file diperiksa sebelum disimpan.
+- Aset disimpan pada bucket R2 `remotion-renders`, prefix `assets/`, tanpa membuat bucket baru. Cron yang sama menghapus aset dan marker kuota setelah `RETENTION_DAYS` (default 7 hari).
+- Daftar aset hanya bisa dibaca dengan kode akses. Preview dan pengunduhan runner memakai URL HMAC bertanda tangan, berlaku maksimal 6 jam. `UPLOAD_TOKEN` tidak diberikan ke langkah pengunduhan aset.
+- Pilih aset yang akan dipakai sebelum render. Untuk template Judul Kinetik, salin path `assets/tanggal/uuid.ext` ke field **File logo di public/**. Untuk kode kustom gunakan `Img`, `Audio`, atau `@font-face` dengan `staticFile('assets/tanggal/uuid.ext')`. Path upload dicantumkan ke input workflow dan diunduh ke `remotion/public/assets/` sebelum thumbnail/MP4.
 
 ## Editor kode dan pengecekan sebelum render
 
@@ -103,7 +118,7 @@ Frontend bisa dipasang di layar utama / desktop dan kerangkanya tetap terbuka sa
 | --- | --- |
 | `remotion/` | Komposisi Remotion (`KineticTitle`, `TikTokSlides`), aset tetap di `public/`, 1080x1920 dan 1920x1080 |
 | `worker/` | Cloudflare Worker (Hono): API, upload, penyajian MP4 + thumbnail, pembatalan, cron pembersihan |
-| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `editor.js`, `lexer.js`, `code-check.js`, `templates.js`, plus berkas PWA (`sw.js`, `pwa.js`, `manifest.webmanifest`, `icons/`) |
+| `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `asset-library.js`, `editor.js`, `lexer.js`, `code-check.js`, `templates.js`, plus berkas PWA (`sw.js`, `pwa.js`, `manifest.webmanifest`, `icons/`) |
 | `scripts/` | Skrip bantu (pembuat ikon PWA) |
 | `.github/workflows/` | `render.yml` (render video + thumbnail) dan `deploy.yml` (deploy Worker + Pages) |
 
@@ -149,7 +164,8 @@ cd worker && npm install && npx wrangler dev   # Worker lokal (butuh .dev.vars)
 - **GitHub Actions**: repo private dapat 2.000 menit/bulan (Linux). Satu render 5-10 detik makan sekitar 2-4 menit, jadi kira-kira 500-1.000 render/bulan. Repo public tidak dibatasi menit. Thumbnail menambah beberapa detik per render. Pengecekan di browser mencegah menit terbuang untuk kode yang pasti gagal.
 - **Workers Free**: 100.000 request/hari, CPU 10 ms/request, body request maks 100 MB (upload dibatasi 90 MB).
 - **KV Free**: 1.000 write/hari. Satu render memakai sekitar 5-6 write (thumbnail menambah satu, pembatalan satu), jadi batas praktis sekitar 170 render/hari. Worker membatasi `MAX_RENDERS_PER_DAY` (default 50).
-- **R2 Free**: 10 GB penyimpanan, 1 juta operasi kelas A dan 10 juta kelas B per bulan. Cron harian menghapus MP4 dan thumbnail yang lebih tua dari `RETENTION_DAYS` (default 7 hari).
+- **R2 Free**: 10 GB penyimpanan, 1 juta operasi kelas A dan 10 juta kelas B per bulan. Cron harian menghapus MP4, thumbnail, aset, dan marker kuota yang lebih tua dari `RETENTION_DAYS` (default 7 hari). Setiap upload aset memakai 2 operasi tulis R2 (slot kuota + file); batas 10/hari berarti maksimum sekitar 20 operasi tulis/hari. Preview/daftar memakai operasi baca/list; setiap render hanya mengunduh aset yang dipilih.
+- **Workers Free**: endpoint upload/list/signed-read memakai request Worker; CPU tetap tunduk pada batas 10 ms/request. Upload membatasi ukuran file sebelum penyimpanan dan memeriksa signature MIME. Tidak ada D1/KV namespace atau bucket baru.
 - **Pages Free**: 500 build/bulan (di sini deploy lewat wrangler dari Actions, jadi tidak memakai build Pages).
 - Endpoint /api/render dan /api/jobs/:id/cancel bersifat publik. Siapa pun yang tahu URL-nya bisa memicu render; kuota harian adalah pengamannya. Tambahkan Cloudflare Access atau kode akses jika perlu.
 

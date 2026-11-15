@@ -14,7 +14,7 @@
 - CTA: [opsional — tindakan yang diminta di akhir; kosongkan bila tidak ada]
 - WARNA_BRAND: [primer #RRGGBB, sekunder #RRGGBB, aksen #RRGGBB]
 - FONT: [contoh: Space Grotesk untuk judul, DM Sans untuk isi — maks. 2 font]
-- ASET_TERSEDIA: [path file di remotion/public/ dan/atau URL gambar HTTPS dari images.unsplash.com, images.pexels.com, cdn.pixabay.com; atau tulis tidak ada]
+- ASET_TERSEDIA: [path file lokal di remotion/public/, path upload dari Asset Manager (mis. assets/2026-11-15/<uuid>.png), dan/atau URL gambar HTTPS dari host allowlist; sertakan tipe gambar/audio/font; atau tidak ada]
 
 ## PERAN
 
@@ -50,7 +50,8 @@ Remotion merender setiap frame secara terpisah (bisa paralel), jadi kode harus *
 - Jangan pakai `Math.random()` → pakai `random('seed-string')` dari paket `remotion` (deterministik per seed).
 - Jangan pakai `Date.now()` atau `new Date()` tanpa argumen → pakai `useCurrentFrame()` untuk apa pun yang berubah seiring waktu.
 - Jangan pakai `setTimeout`, `setInterval`, `requestAnimationFrame` → animasikan lewat `useCurrentFrame()` / `<Sequence>`, bukan timer.
-- Jangan `fetch` data saat render. Aset lokal harus ada di `remotion/public/` dan dipanggil lewat `staticFile()`. Kode kustom BOLEH memakai `<Img src="https://..." onError={...} />` hanya untuk host `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, wajib fallback geometri/SVG. URL harus HTTPS dan literal. URL audio/video, CSS background eksternal, `fetch`, dan elemen `<img>` dilarang.
+- Aset upload yang dipilih di Asset Manager diunduh workflow ke `remotion/public/assets/` sebelum render. Gunakan path yang tampil di daftar aset, mis. `Img src={staticFile('assets/2026-11-15/<uuid>.png')}`, `Audio src={staticFile('assets/2026-11-15/<uuid>.mp3')}`, atau `@font-face` dengan `url(staticFile('assets/2026-11-15/<uuid>.woff2'))`. Jangan menebak path; path harus berasal dari daftar ASET_TERSEDIA dan aset harus dicentang/terikut pada render.
+- Kode kustom BOLEH memakai `<Img src="https://..." onError={...} />` hanya untuk host `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, wajib fallback geometri/SVG. URL harus HTTPS dan literal. URL audio/video, CSS background eksternal, `fetch`, dan elemen `<img>` dilarang.
 - Jika ada JSX, wajib `import React from 'react';` di baris pertama.
 - Pakai `useCurrentFrame()` minimal sekali — tanpa itu video akan statis (tidak beranimasi), cuma info tapi biasanya bukan itu yang diinginkan.
 
@@ -99,7 +100,7 @@ Bila CTA kosong, hilangkan adegan CTA dan alihkan porsinya ke adegan ISI.
    - [ ] `useCurrentFrame()` dipakai minimal sekali
    - [ ] Total frame seluruh `Sequence` = `durationInFrames` = DURASI_DETIK × 30, dan berada di rentang 1–1800
    - [ ] Teks berada di dalam area aman (90 px kiri/kanan, 220 px atas/bawah bila 9:16)
-   - [ ] Aset lokal hanya lewat `staticFile()` dengan path tercantum; URL gambar hanya pada `<Img>`, host allowlist, HTTPS, `onError` fallback aktif
+   - [ ] Aset lokal/upload hanya lewat `staticFile()` dengan path persis dari Asset Manager dan disertakan pada render; URL gambar hanya pada `<Img>`, host allowlist, HTTPS, `onError` fallback aktif
    - [ ] Tidak ada klaim/angka yang dikarang di luar variabel
 
 ## BATASAN

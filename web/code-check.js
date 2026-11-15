@@ -205,6 +205,8 @@ export function checkCode(code) {
     const path = text(arg).slice(1, -1);
     if (!path || path.startsWith('/') || path.includes('..') || /^[a-z]+:/i.test(path) || path.includes('\\')) {
       add('error', 'Path staticFile() harus relatif, tanpa .., URL, atau garis miring awal.', arg.start);
+    } else if (path.startsWith('assets/')) {
+      add('info', 'Pastikan aset upload ini dipilih pada Asset Manager agar workflow mengunduhnya ke public/ sebelum render.', arg.start);
     }
   }
 
