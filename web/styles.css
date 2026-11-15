@@ -595,3 +595,30 @@ footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
     transition-duration: .01ms !important;
   }
 }
+
+/* Responsive export dock and balanced desktop asset toolbar. */
+@media (min-width: 768px) {
+  .asset-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .asset-buttons { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+  body.render-dock-visible { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  body.render-dock-visible .render-section .render-controls {
+    position: fixed;
+    z-index: 80;
+    right: 16px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
+    width: auto;
+    max-width: 480px;
+    margin-inline: auto;
+    padding: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    background: rgba(12, 21, 37, .98);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+  }
+  body.render-dock-visible .render-section .actions { width: 100%; }
+  body.render-dock-visible .render-section .primary { flex: 1 1 auto; }
+  body.render-dock-visible .render-section .danger { flex: 0 0 auto; }
+}
