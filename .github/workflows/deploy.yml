@@ -19,6 +19,7 @@ permissions:
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  API_URL: https://remotion-api.harveymoeid.workers.dev
 
 jobs:
   worker:
@@ -62,6 +63,14 @@ jobs:
           printf '%s' "$UPLOAD_TOKEN" | npx wrangler secret put UPLOAD_TOKEN
           printf '%s' "$DISPATCH_TOKEN" | npx wrangler secret put DISPATCH_TOKEN
           if [ -n "$ACCESS_CODE" ]; then printf '%s' "$ACCESS_CODE" | npx wrangler secret put ACCESS_CODE; fi
+
+      - name: Smoke test asset endpoints (must reject without access code)
+        run: |
+          post_code=$(curl -sS -o /tmp/asset-post.json -w '%{http_code}' -X POST "$API_URL/api/assets")
+          get_code=$(curl -sS -o /tmp/asset-get.json -w '%{http_code}' "$API_URL/api/assets")
+          [ "$post_code" = "401" ] || { cat /tmp/asset-post.json; echo "::error::POST /api/assets should reject without code (got $post_code)"; exit 1; }
+          [ "$get_code" = "401" ] || { cat /tmp/asset-get.json; echo "::error::GET /api/assets should reject without code (got $get_code)"; exit 1; }
+          echo 'Asset upload/list endpoints reject unauthenticated requests as expected.'
 
   pages:
     runs-on: ubuntu-latest
