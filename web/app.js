@@ -1,6 +1,7 @@
 import {API_BASE} from './config.js';
 import {CUSTOM_EXAMPLE, TEMPLATES} from './templates.js';
 import {createEditor} from './editor.js';
+import {createAssetLibrary} from './asset-library.js';
 import {MAX_CODE_CHARS, checkBuiltin, checkCode} from './code-check.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -20,6 +21,7 @@ const TEMPLATE_META = {
   CustomCode: {icon: '</>', category: 'DEVELOPER', note: 'Build your own motion'},
 };
 const state = {template: TEMPLATES[0], ratio: '9:16', values: {}, timer: null, currentId: null, jobs: {}};
+const assetLibrary = createAssetLibrary(API_BASE);
 
 function el(tag, props = {}, children = []) {
   const node = Object.assign(document.createElement(tag), props);
@@ -206,12 +208,9 @@ try {
 } catch {
   /* storage tidak tersedia: abaikan */
 }
+assetLibrary.setAccessCode($('#accessCode').value);
 $('#accessCode').oninput = (event) => {
-  try {
-    sessionStorage.setItem(ACCESS_KEY, event.target.value);
-  } catch {
-    /* storage tidak tersedia: abaikan */
-  }
+  assetLibrary.setAccessCode(event.target.value);
 };
 updateCounter();
 
@@ -350,6 +349,19 @@ $('#cancel').onclick = () => {
 async function startRender() {
   const button = $('#render');
   const body = {template: state.template.id, ratio: state.ratio, props: buildProps()};
+  const assetPaths = new Set(assetLibrary.getSelectedPaths());
+  if (!state.template.custom && typeof body.props.logoFile === 'string' && body.props.logoFile.startsWith('assets/')) assetPaths.add(body.props.logoFile);
+  if (state.template.custom) {
+    const assetPathPattern = /staticFile\(\s*['\"](assets\/[^'\"]+)['\"]\s*\)/g;
+    for (const match of $('#code').value.matchAll(assetPathPattern)) assetPaths.add(match[1]);
+  }
+  if (assetPaths.size > 20) return showMessage('Maksimal 20 aset dapat dipakai dalam satu render.');
+  if (assetPaths.size > 0) {
+    const accessCode = $('#accessCode').value || assetLibrary.getAccessCode();
+    if (!accessCode) return showMessage('Masukkan kode akses pemilik pada Asset Manager untuk memakai aset.');
+    body.assets = [...assetPaths];
+    body.accessCode = accessCode;
+  }
   if (state.template.custom) {
     const code = $('#code').value;
     const accessCode = $('#accessCode').value;

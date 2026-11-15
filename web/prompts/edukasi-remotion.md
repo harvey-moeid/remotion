@@ -14,7 +14,7 @@
 - KUIS_PENUTUP: [satu pertanyaan + jawaban benar + 2 pilihan salah]
 - WARNA_BRAND: [primer #RRGGBB, sekunder #RRGGBB, aksen #RRGGBB]
 - FONT: [contoh: Space Grotesk untuk judul, DM Sans untuk isi]
-- ASET_TERSEDIA: [path file di remotion/public/ dan/atau URL gambar dari images.unsplash.com, images.pexels.com, cdn.pixabay.com; atau tidak ada]
+- ASET_TERSEDIA: [path file di remotion/public/, path upload dari Asset Manager (gambar/audio/font), dan/atau URL gambar HTTPS dari host allowlist; atau tidak ada]
 - NAMA_KANAL: [opsional, untuk watermark kecil]
 
 ## PERAN
@@ -38,7 +38,7 @@ Buat satu komposisi Remotion (React + TypeScript) berdurasi 30 detik tentang **T
 - Satu file komposisi, ekspor default berupa komponen React.
 - Sertakan `export const config = { durationInFrames: 900, fps: 30, width: 1080, height: 1920 }`.
 - Hanya gunakan API Remotion: `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Sequence`, `AbsoluteFill`, `Easing`, `Img`, `Audio`, `staticFile`.
-- Aset lokal hanya dari `remotion/public/` melalui `staticFile()` dan harus tercantum di ASET_TERSEDIA. URL gambar hanya lewat `<Img>` dari host allowlist, HTTPS, literal, wajib `onError` dan fallback SVG/geometri. `fetch`, URL audio/video, dan elemen `<img>` dilarang.
+- Aset upload yang dipilih di Asset Manager tersedia di `public/assets/`; gunakan path persis dari daftar melalui `staticFile()` untuk gambar/audio/font. Jangan menebak path dan pastikan aset disertakan pada render. URL gambar hanya lewat `<Img>` dari host allowlist, HTTPS, literal, wajib `onError` dan fallback SVG/geometri. `fetch`, URL audio/video, dan elemen `<img>` dilarang.
 - Tanpa aset eksternal, tanpa request jaringan, tanpa `Math.random()` (animasi harus deterministik).
 - Area aman: 90 px dari kiri/kanan dan 220 px dari atas/bawah.
 - Teks isi minimal 56 px, judul minimal 96 px. Kontras teks terhadap latar minimal 4,5 : 1.

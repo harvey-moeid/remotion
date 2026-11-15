@@ -65,6 +65,21 @@
         <div id="prompt-list" class="prompt-list"><p class="prompt-status">Memuat daftar prompt…</p></div>
       </section>
 
+      <section class="asset-library panel" aria-labelledby="asset-library-title">
+        <div class="asset-library-heading">
+          <div><span class="section-kicker">ASSET MANAGER</span><h2 id="asset-library-title">Library aset pribadi</h2><p>Upload gambar, audio, dan font untuk dipakai di template atau kode kustom.</p></div>
+          <span class="asset-limit">10 UPLOAD / HARI</span>
+        </div>
+        <div class="asset-toolbar">
+          <label class="field" for="assetAccessCode"><span>Kode akses pemilik</span><input id="assetAccessCode" type="password" autocomplete="off" placeholder="Kode akses yang sama dengan Kode kustom"></label>
+          <label class="field asset-file-field" for="assetFile"><span>File aset <small>Gambar 5 MB · Audio 15 MB · Font 2 MB</small></span><input id="assetFile" type="file" accept="image/png,image/jpeg,image/webp,audio/mpeg,audio/wav,audio/ogg,audio/aac,font/woff,font/woff2,font/ttf,font/otf,.woff,.woff2,.ttf,.otf"></label>
+          <div class="asset-buttons"><button id="assetUpload" class="btn" type="button">＋ Upload aset</button><button id="assetRefresh" class="btn" type="button">Muat aset</button></div>
+        </div>
+        <p id="assetStatus" class="asset-status" role="status" aria-live="polite">Masukkan kode akses untuk membuka library aset pribadi.</p>
+        <ul id="assetList" class="asset-list"><li class="asset-empty">Aset belum dimuat.</li></ul>
+        <p class="asset-help">Centang aset agar disertakan pada render. Untuk kode kustom, gunakan <code>staticFile('assets/tanggal/id-file.ext')</code>. Path dapat disalin dari setiap kartu.</p>
+      </section>
+
       <section class="workspace panel">
         <div class="panel-heading">
           <div><span class="section-kicker">02 / COMPOSITION</span><h2>Atur konten video</h2></div>
@@ -132,6 +147,7 @@
     </main>
     <footer><span>BYGA</span><span>Remotion Studio · Powered by Remotion</span></footer>
   </div>
+  <script type="module" src="asset-library.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="prompt-library.js"></script>
   <script type="module" src="pwa.js"></script>

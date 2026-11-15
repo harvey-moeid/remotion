@@ -66,7 +66,8 @@
           "tidak ada — gunakan bentuk geometri dan teks",
           "logo/sample-mark.svg",
           "logo/sample-mark.svg; audio/brand-theme.mp3",
-          "URL gambar: https://images.unsplash.com/..."
+          "URL gambar: https://images.unsplash.com/...",
+          "Upload aset pribadi: pilih gambar/audio/font di Asset Manager"
         ]
       }
     },
@@ -105,6 +106,12 @@
           "Space Grotesk untuk judul, DM Sans untuk isi",
           "Georgia untuk judul, Arial untuk isi",
           "Arial Black untuk judul, Arial untuk isi"
+        ],
+        "ASET_TERSEDIA": [
+          "tidak ada — gunakan SVG dan geometri",
+          "Upload gambar ilustrasi dari Asset Manager",
+          "Upload audio narasi dari Asset Manager",
+          "Upload font lokal dari Asset Manager"
         ]
       }
     },
@@ -147,7 +154,8 @@
           "logo/sample-mark.svg",
           "audio/brand-theme.mp3",
           "fonts/brand-font.woff2",
-          "URL gambar: https://images.unsplash.com/..."
+          "URL gambar: https://images.unsplash.com/...",
+          "Upload aset pribadi: pilih path dari Asset Manager"
         ]
       }
     }

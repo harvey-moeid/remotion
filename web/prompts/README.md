@@ -42,7 +42,15 @@ Tidak perlu mengubah `index.html`, `prompt-library.js`, atau CSS.
 
 ## Aset lokal untuk prompt
 
-Aset statis disimpan di `remotion/public/` dan dipanggil melalui `staticFile()`. URL gambar eksternal hanya boleh dipakai lewat `<Img>` dari `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, HTTPS, URL literal, dan `onError` dengan fallback geometri/SVG. URL audio/video dan `fetch()` tetap dilarang. `fetch`, URL audio/video, dan elemen `<img>` dilarang. Sinkronkan domain pada Worker, code-check, dan prompt.
+Aset statis repository disimpan di `remotion/public/`. Aset pribadi dapat diunggah melalui panel Asset Manager (gambar maks. 5 MB, audio 15 MB, font 2 MB; 10 file/hari; retensi 7 hari). Pilih aset yang ingin disertakan saat render, lalu gunakan path persis yang ditampilkan melalui `staticFile('assets/tanggal/id-file.ext')`. `Audio` memakai path lokal yang sama; font memakai `@font-face` dan `staticFile()`. URL gambar eksternal hanya boleh dipakai lewat `<Img>` dari `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, HTTPS, URL literal, dan `onError` dengan fallback geometri/SVG. `fetch`, URL audio/video, dan elemen `<img>` dilarang.
+
+## Aset pribadi dan cara pakai di prompt
+
+1. Masukkan kode akses pemilik di panel **Library aset pribadi**.
+2. Upload satu file gambar/audio/font, lalu centang aset yang akan dipakai pada render.
+3. Salin path aset dari kartunya dan isi `ASET_TERSEDIA` pada prompt.
+4. Untuk gambar/audio gunakan `staticFile('assets/...')`; font gunakan `@font-face` dengan `url(staticFile('assets/...'))`.
+5. Jangan menebak path dan jangan menghapus prefix tanggal/UUID. Jika aset tidak dicentang atau tidak ada di daftar, gunakan fallback SVG/geometri.
 
 ## Prompt tersedia
 

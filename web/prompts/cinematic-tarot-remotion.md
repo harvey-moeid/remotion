@@ -170,7 +170,11 @@ Pastikan tidak ada teks terpotong, bertumpuk, atau keluar dari safe area.
 
 Pertahankan margin aman di bagian atas dan bawah untuk UI TikTok.
 
-## 6. Aturan teknis Remotion
+## 6. Aset pribadi
+
+Jika memakai gambar kartu, logo, musik, voice-over, atau font milik sendiri, upload melalui panel **Library aset pribadi** di Remotion Studio. Gunakan hanya path yang tampil pada daftar aset, misalnya `staticFile('assets/2026-11-15/<uuid>.png')`; centang aset tersebut agar workflow mengunduhnya sebelum render. Jika tidak ada aset yang dipilih, buat ilustrasi kartu dan ornamen dengan SVG/geometri. URL gambar eksternal pada kode kustom hanya boleh dari domain allowlist yang dijelaskan di master prompt Universal dan wajib fallback.
+
+## 7. Aturan teknis Remotion
 
 WAJIB mengikuti batasan editor Kode Kustom repository harvey-moeid/remotion:
 
@@ -204,7 +208,7 @@ export const config = {
 };
 ```
 
-## 7. Quality control
+## 8. Quality control
 
 Sebelum memberikan kode:
 
@@ -219,7 +223,7 @@ Sebelum memberikan kode:
 - Pastikan animasi tidak bergantung pada waktu nyata.
 - Pastikan kode di bawah 100.000 karakter.
 
-## 8. Output wajib
+## 9. Output wajib
 
 Berikan:
 
