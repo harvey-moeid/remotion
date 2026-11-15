@@ -138,7 +138,7 @@ async function signedAssetUrl(env: Bindings, origin: string, key: string): Promi
   const expires = String(Math.floor(Date.now() / 1000) + 6 * 3600);
   const signature = await assetSignature(env, key, expires);
   const encodedPath = key.slice('assets/'.length);
-  return {path: encodedPath, url: origin + '/assets/' + encodedPath + '?expires=' + expires + '&signature=' + signature};
+  return {path: key, url: origin + '/assets/' + encodedPath + '?expires=' + expires + '&signature=' + signature};
 }
 
 const app = new Hono<{Bindings: Bindings}>();
@@ -222,6 +222,7 @@ app.post('/api/render', async (c) => {
     return c.json({error: 'props harus berupa object'}, 400);
   }
   if (Object.prototype.hasOwnProperty.call(props, 'imageUrl') && props.imageUrl !== '' && !isAllowedImageUrl(props.imageUrl, c.env)) return c.json({error: 'URL gambar harus HTTPS dan berasal dari domain yang diizinkan'}, 400);
+  if (body.assets !== undefined && !Array.isArray(body.assets)) return c.json({error: 'assets harus berupa array path aset'}, 400);
   const assetKeys = Array.isArray(body.assets) ? body.assets : [];
   if (assetKeys.length > MAX_ASSET_SELECTIONS || assetKeys.some((key) => typeof key !== 'string' || !ASSET_KEY_RE.test(key))) return c.json({error: 'Daftar aset tidak valid (maksimal 20 file)'}, 400);
   if (assetKeys.length > 0 && !(await requireAccessCode(c))) return c.json({error: 'Kode akses diperlukan untuk memakai aset pribadi'}, 401);
