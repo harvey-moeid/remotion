@@ -455,6 +455,7 @@ function renderHistory() {
     const thumb = job && job.thumbUrl
       ? el('img', {className: 'thumb', src: job.thumbUrl, alt: `Thumbnail ${item.template}`, loading: 'lazy'})
       : el('div', {className: 'thumb', textContent: status === 'done' ? 'MP4' : '▶'});
+    thumb.classList.add(item.ratio === '16:9' ? 'wide' : 'tall');
 
     const info = el('div', {className: 'info'}, [
       el('button', {

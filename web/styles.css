@@ -622,3 +622,14 @@ footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
   body.render-dock-visible .render-section .primary { flex: 1 1 auto; }
   body.render-dock-visible .render-section .danger { flex: 0 0 auto; }
 }
+
+/* Thumbnail geometry follows the saved render ratio without changing history data. */
+.thumb { width: 78px; height: 70px; }
+.thumb.wide { width: 78px; height: 44px; aspect-ratio: 16 / 9; }
+.thumb.tall { width: 40px; height: 70px; aspect-ratio: 9 / 16; }
+@media (max-width: 767px) {
+  .history > li:not(:only-child) { grid-template-columns: 82px minmax(0, 1fr); }
+  .history .thumb { width: auto; max-width: 82px; }
+  .history .thumb.wide { width: 78px; height: 44px; }
+  .history .thumb.tall { width: 40px; height: 70px; }
+}
