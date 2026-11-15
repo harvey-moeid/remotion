@@ -21,6 +21,11 @@ on:
         required: false
         default: '9:16'
         type: string
+      assets:
+        description: Manifest aset terpilih (URL bertanda tangan dari Worker)
+        required: false
+        default: '[]'
+        type: string
 
 permissions:
   contents: read
@@ -31,6 +36,7 @@ env:
   TEMPLATE: ${{ inputs.template }}
   RATIO: ${{ inputs.ratio }}
   PROPS_JSON: ${{ inputs.props }}
+  ASSETS_JSON: ${{ inputs.assets }}
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 # UPLOAD_TOKEN sengaja HANYA diberikan ke langkah yang memerlukannya (bukan ke seluruh job),
@@ -84,6 +90,22 @@ jobs:
 
       - name: Siapkan props
         run: node scripts/prepare-props.mjs
+
+      # URL sudah ditandatangani Worker; langkah ini tidak menerima UPLOAD_TOKEN.
+      - name: Unduh aset terpilih dari R2
+        env:
+          ASSETS_JSON: ${{ inputs.assets }}
+        run: |
+          printf '%s' "$ASSETS_JSON" | jq -e 'type == "array" and length <= 20' >/dev/null
+          while IFS= read -r asset; do
+            path=$(printf '%s' "$asset" | jq -r '.path // empty')
+            url=$(printf '%s' "$asset" | jq -r '.url // empty')
+            [[ "$path" =~ ^assets/[0-9]{4}-[0-9]{2}-[0-9]{2}/[0-9a-f-]{36}\\.(png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$ ]] || { echo '::error::Path aset tidak valid'; exit 1; }
+            [[ "$url" == "$API_URL/assets/"* ]] || { echo '::error::URL aset bukan dari Worker'; exit 1; }
+            mkdir -p "public/$(dirname "$path")"
+            curl -fsS --retry 2 --retry-delay 2 --max-time 90 "$url" -o "public/$path"
+            test -s "public/$path" || { echo '::error::Aset kosong'; exit 1; }
+          done < <(printf '%s' "$ASSETS_JSON" | jq -c '.[]')
 
       - name: Ambil kode kustom dari Worker
         if: inputs.template == 'CustomCode'
