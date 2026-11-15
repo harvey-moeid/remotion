@@ -151,7 +151,7 @@ app.post('/api/render', async (c) => {
   if (typeof ratio !== 'string' || !RATIOS.includes(ratio)) {
     return c.json({error: 'ratio harus 9:16 atau 16:9'}, 400);
   }
-  const props = body.props ?? {};
+  const props = (body.props ?? {}) as Record<string, unknown>;
   if (typeof props !== 'object' || props === null || Array.isArray(props)) {
     return c.json({error: 'props harus berupa object'}, 400);
   }

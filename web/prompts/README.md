@@ -42,7 +42,7 @@ Tidak perlu mengubah `index.html`, `prompt-library.js`, atau CSS.
 
 ## Aset lokal untuk prompt
 
-Aset statis disimpan di `remotion/public/` dan dipanggil melalui `staticFile()`. URL gambar eksternal hanya boleh dipakai lewat `<Img>` dari `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, HTTPS, URL literal, dan `onError` dengan fallback geometri/SVG. `fetch`, URL audio/video, dan elemen `<img>` dilarang. Sinkronkan domain pada Worker, code-check, dan prompt.
+Aset statis disimpan di `remotion/public/` dan dipanggil melalui `staticFile()`. URL gambar eksternal hanya boleh dipakai lewat `<Img>` dari `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, HTTPS, URL literal, dan `onError` dengan fallback geometri/SVG. URL audio/video dan `fetch()` tetap dilarang. `fetch`, URL audio/video, dan elemen `<img>` dilarang. Sinkronkan domain pada Worker, code-check, dan prompt.
 
 ## Prompt tersedia
 

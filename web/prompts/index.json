@@ -65,7 +65,8 @@
         "ASET_TERSEDIA": [
           "tidak ada — gunakan bentuk geometri dan teks",
           "logo/sample-mark.svg",
-          "logo/sample-mark.svg; audio/brand-theme.mp3"
+          "logo/sample-mark.svg; audio/brand-theme.mp3",
+          "URL gambar: https://images.unsplash.com/..."
         ]
       }
     },
@@ -145,7 +146,8 @@
           "tidak ada — gunakan bentuk geometri dan teks",
           "logo/sample-mark.svg",
           "audio/brand-theme.mp3",
-          "fonts/brand-font.woff2"
+          "fonts/brand-font.woff2",
+          "URL gambar: https://images.unsplash.com/..."
         ]
       }
     }

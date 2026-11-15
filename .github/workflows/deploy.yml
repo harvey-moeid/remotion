@@ -19,9 +19,6 @@ permissions:
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-  UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
-  DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
-  ACCESS_CODE: ${{ secrets.ACCESS_CODE }}
 
 jobs:
   worker:
@@ -31,6 +28,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cek secret
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          ACCESS_CODE: ${{ secrets.ACCESS_CODE }}
         run: |
           missing=0
           for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID UPLOAD_TOKEN DISPATCH_TOKEN; do
@@ -53,6 +54,10 @@ jobs:
 
       - name: Set secret Worker
         working-directory: worker
+        env:
+          UPLOAD_TOKEN: ${{ secrets.UPLOAD_TOKEN }}
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          ACCESS_CODE: ${{ secrets.ACCESS_CODE }}
         run: |
           printf '%s' "$UPLOAD_TOKEN" | npx wrangler secret put UPLOAD_TOKEN
           printf '%s' "$DISPATCH_TOKEN" | npx wrangler secret put DISPATCH_TOKEN
