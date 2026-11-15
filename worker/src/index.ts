@@ -498,8 +498,9 @@ app.post('/api/assets', async (c) => {
   const length = Number(c.req.header('content-length') ?? 0);
   if (length > 16 * 1024 * 1024) return c.json({error: 'Request terlalu besar'}, 413);
   const form = await c.req.formData().catch(() => null);
-  const file = form?.get('file');
-  if (!(file instanceof File)) return c.json({error: 'Pilih satu file aset'}, 400);
+  const fileValue: unknown = form?.get('file');
+  if (!fileValue || typeof fileValue !== 'object' || !('arrayBuffer' in fileValue) || !('size' in fileValue) || !('type' in fileValue) || !('name' in fileValue)) return c.json({error: 'Pilih satu file aset'}, 400);
+  const file = fileValue as File;
   const suppliedMime = file.type.toLowerCase();
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   const rule = ASSET_RULES[suppliedMime] ?? ASSET_RULES[ASSET_MIME_BY_EXTENSION[extension] ?? ''];
@@ -538,8 +539,9 @@ app.get('/api/assets', async (c) => {
   const objects: R2Object[] = [];
   let cursor: string | undefined;
   do {
-    const page = await c.env.RENDERS.list({prefix: 'assets/', cursor, limit: 100, include: ['httpMetadata', 'customMetadata']});
-    objects.push(...page.objects);
+    const page = await c.env.RENDERS.list({prefix: 'assets/', cursor, limit: 100});
+    const metadata = await Promise.all(page.objects.map((item) => c.env.RENDERS.head(item.key)));
+    objects.push(...metadata.filter((item): item is R2Object => item !== null));
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor && objects.length < 200);
   const origin = new URL(c.req.url).origin;
