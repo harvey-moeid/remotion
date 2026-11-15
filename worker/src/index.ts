@@ -36,6 +36,18 @@ type Job = {
   thumb?: boolean;
 };
 
+// Metadata ringkas yang ikut disimpan pada kunci KV `job:<id>` supaya daftar riwayat cukup satu operasi list
+// (tanpa membaca tiap job). Batas metadata KV 1.024 byte; field dibuat pendek.
+type JobMeta = {
+  s: JobStatus;
+  t: string;
+  r: string;
+  c: string;
+  u: string;
+  th?: 1;
+  z?: number;
+};
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TEMPLATE_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const RATIOS = ['9:16', '16:9'];
@@ -44,6 +56,8 @@ const MAX_THUMB_BYTES = 2 * 1024 * 1024;
 const MAX_ASSET_SELECTIONS = 20;
 const ASSET_RETENTION_PREFIXES = ['renders/', 'thumbs/', 'assets/', 'asset-quota/'];
 const JOB_TTL_SECONDS = 7 * 24 * 3600;
+// Job lama (disimpan sebelum metadata ada) dibaca satu per satu; dibatasi agar total subrequest tetap di bawah 50.
+const MAX_LEGACY_JOB_READS = 40;
 
 // Template kode kustom: kode pengguna disimpan sementara di KV, lalu diambil oleh GitHub Actions.
 const CUSTOM_TEMPLATE = 'CustomCode';
@@ -143,10 +157,32 @@ async function getJob(env: Bindings, id: string): Promise<Job | null> {
   return env.JOBS.get<Job>(`job:${id}`, 'json');
 }
 
+function jobMeta(job: Job): JobMeta {
+  const meta: JobMeta = {s: job.status, t: job.template, r: job.ratio, c: job.createdAt, u: job.updatedAt};
+  if (job.thumb) meta.th = 1;
+  if (typeof job.size === 'number') meta.z = job.size;
+  return meta;
+}
+
+// Setiap perubahan job lewat sini, jadi metadata untuk daftar riwayat selalu ikut diperbarui (tanpa tambahan write KV).
 async function saveJob(env: Bindings, job: Job): Promise<Job> {
   const next: Job = {...job, updatedAt: nowIso()};
-  await env.JOBS.put(`job:${job.id}`, JSON.stringify(next), {expirationTtl: JOB_TTL_SECONDS});
+  await env.JOBS.put(`job:${job.id}`, JSON.stringify(next), {expirationTtl: JOB_TTL_SECONDS, metadata: jobMeta(next)});
   return next;
+}
+
+function summarizeJob(origin: string, id: string, meta: JobMeta) {
+  return {
+    id,
+    status: meta.s,
+    template: meta.t,
+    ratio: meta.r,
+    createdAt: meta.c,
+    updatedAt: meta.u,
+    size: meta.z ?? null,
+    videoUrl: meta.s === 'done' ? `${origin}/files/${id}.mp4` : null,
+    thumbUrl: meta.th ? `${origin}/thumbs/${id}.jpg` : null,
+  };
 }
 
 // Bandingkan dua string lewat hash SHA-256 agar waktu pembandingan konstan.
@@ -286,6 +322,45 @@ app.post('/api/render', async (c) => {
 
   await c.env.JOBS.put(quotaKey, String(used + 1), {expirationTtl: 172800});
   return c.json({jobId: id}, 202);
+});
+
+// 1b) Daftar job terbaru untuk riwayat di web (termasuk job yang dibuat lewat MCP / perangkat lain).
+// Hanya pemilik (X-Access-Code): daftar ini membuka id job, dan id yang tak bisa ditebak adalah satu-satunya
+// pengaman endpoint status/batal yang publik. Data dari metadata KV, jadi cukup satu operasi list.
+app.get('/api/jobs', async (c) => {
+  if (!(await requireAccessCode(c))) {
+    return c.json({error: 'Kode akses salah atau belum dikonfigurasi'}, 401);
+  }
+  const requested = Number(c.req.query('limit') ?? 30);
+  const limit = Math.min(Math.max(Number.isFinite(requested) ? Math.floor(requested) : 30, 1), 100);
+  const origin = new URL(c.req.url).origin;
+
+  const keys: Array<{name: string; metadata?: JobMeta | null}> = [];
+  let cursor: string | undefined;
+  do {
+    const page = await c.env.JOBS.list<JobMeta>({prefix: 'job:', cursor, limit: 1000});
+    keys.push(...page.keys);
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && keys.length < 2000);
+
+  const items: Array<ReturnType<typeof summarizeJob>> = [];
+  const legacy: string[] = [];
+  for (const key of keys) {
+    const id = key.name.slice('job:'.length);
+    if (!UUID_RE.test(id)) continue;
+    const meta = key.metadata;
+    if (meta && typeof meta.c === 'string' && typeof meta.s === 'string') items.push(summarizeJob(origin, id, meta));
+    else legacy.push(id);
+  }
+  // Job yang ditulis sebelum metadata ada (maks. 7 hari sejak rilis ini) dibaca satu per satu.
+  const legacyJobs = await Promise.all(legacy.slice(0, MAX_LEGACY_JOB_READS).map((id) => getJob(c.env, id)));
+  for (const job of legacyJobs) {
+    if (job) items.push(summarizeJob(origin, job.id, jobMeta(job)));
+  }
+
+  items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  c.header('Cache-Control', 'no-store');
+  return c.json({jobs: items.slice(0, limit)});
 });
 
 // 2) UI polling status job.
