@@ -515,7 +515,7 @@ app.post('/api/assets', async (c) => {
 
   const id = crypto.randomUUID();
   const key = 'assets/' + date + '/' + id + '.' + rule.extension;
-  const originalName = file.name.replace(/[\\/\\u0000-\\u001f]/g, '_').slice(0, 120) || 'asset.' + rule.extension;
+  const originalName = file.name.replace(/[\/\u0000-\u001f]/g, '_').slice(0, 120) || 'asset.' + rule.extension;
   try {
     await c.env.RENDERS.put(key, bytes, {
       httpMetadata: {contentType: rule.mime, cacheControl: 'private, max-age=3600'},
@@ -553,7 +553,7 @@ app.get('/assets/:date/:name', async (c) => {
   const key = 'assets/' + date + '/' + name;
   const expires = c.req.query('expires') ?? '', signature = c.req.query('signature') ?? '';
   const exp = Number(expires), now = Math.floor(Date.now() / 1000);
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^[0-9a-f-]{36}\\.(?:png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$/.test(name) || !Number.isInteger(exp) || exp < now || exp > now + 6 * 3600 || !c.env.ACCESS_CODE) return c.json({error: 'link aset tidak valid atau kedaluwarsa'}, 403);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^[0-9a-f-]{36}\.(?:png|jpg|webp|mp3|wav|ogg|aac|woff2|woff|ttf|otf)$/.test(name) || !Number.isInteger(exp) || exp < now || exp > now + 6 * 3600 || !c.env.ACCESS_CODE) return c.json({error: 'link aset tidak valid atau kedaluwarsa'}, 403);
   if (!(await safeEqual(signature, await assetSignature(c.env, key, expires)))) return c.json({error: 'signature tidak valid'}, 403);
   const obj = await c.env.RENDERS.get(key);
   if (!obj) return c.json({error: 'aset tidak ditemukan'}, 404);
