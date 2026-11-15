@@ -51,7 +51,7 @@ Remotion merender setiap frame secara terpisah (bisa paralel), jadi kode harus *
 - Jangan pakai `Date.now()` atau `new Date()` tanpa argumen → pakai `useCurrentFrame()` untuk apa pun yang berubah seiring waktu.
 - Jangan pakai `setTimeout`, `setInterval`, `requestAnimationFrame` → animasikan lewat `useCurrentFrame()` / `<Sequence>`, bukan timer.
 - Aset upload yang dipilih di Asset Manager diunduh workflow ke `remotion/public/assets/` sebelum render. Gunakan path yang tampil di daftar aset, mis. `Img src={staticFile('assets/2026-11-15/<uuid>.png')}`, `Audio src={staticFile('assets/2026-11-15/<uuid>.mp3')}`, atau `@font-face` dengan `url(staticFile('assets/2026-11-15/<uuid>.woff2'))`. Jangan menebak path; path harus berasal dari daftar ASET_TERSEDIA dan aset harus dicentang/terikut pada render.
-- Kode kustom BOLEH memakai `<Img src="https://..." onError={...} />` hanya untuk host `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, wajib fallback geometri/SVG. URL harus HTTPS dan literal. URL audio/video, CSS background eksternal, `fetch`, dan elemen `<img>` dilarang.
+- Kode kustom BOLEH memakai `<Img src="https://..." onError={...} />` hanya untuk host `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, wajib fallback geometri/SVG. URL harus HTTPS dan literal. URL audio/video, CSS background eksternal, `fetch`, elemen `<img>`, `<video>`, dan `OffthreadVideo` dilarang. Video bukan jenis aset yang diaktifkan.
 - Jika ada JSX, wajib `import React from 'react';` di baris pertama.
 - Pakai `useCurrentFrame()` minimal sekali — tanpa itu video akan statis (tidak beranimasi), cuma info tapi biasanya bukan itu yang diinginkan.
 

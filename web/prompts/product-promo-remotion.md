@@ -30,7 +30,7 @@ Buat satu komposisi Remotion (React + TypeScript) untuk video promosi **NAMA_PRO
 - Satu file komposisi, ekspor default berupa komponen React.
 - Sertakan `export const config = { durationInFrames: 600, fps: 30, width: 1080, height: 1920 }`.
 - Hanya gunakan API Remotion: `useCurrentFrame`, `useVideoConfig`, `interpolate`, `spring`, `Sequence`, `AbsoluteFill`, `Easing`, `Img`, `Audio`, `staticFile`.
-- Aset upload yang dipilih di Asset Manager tersedia di `public/assets/`; gunakan path persis dari daftar melalui `staticFile()` untuk gambar/audio/font. Jangan menebak path dan pastikan aset disertakan pada render. URL gambar hanya lewat `<Img src="https://..." onError={...} />` dari host allowlist; wajib fallback. URL audio/video dan `fetch` dilarang.
+- Aset upload yang dipilih di Asset Manager tersedia di `public/assets/`; gunakan path persis dari daftar melalui `staticFile()` untuk gambar/audio/font. Jangan menebak path dan pastikan aset disertakan pada render. URL gambar hanya lewat `<Img src="https://..." onError={...} />` dari host allowlist; wajib fallback. URL audio/video, `<video>`, `OffthreadVideo`, dan `fetch` dilarang.
 - Tanpa aset eksternal, tanpa request jaringan, tanpa `Math.random()` (animasi harus deterministik; jika perlu variasi, gunakan nilai dari frame).
 - Semua teks aman dari pemotongan: simpan teks dalam area aman 90 px dari tepi kiri/kanan dan 220 px dari atas/bawah (area UI TikTok/Reels).
 - Ukuran teks minimal 56 px untuk isi dan 96 px untuk judul agar terbaca di ponsel.

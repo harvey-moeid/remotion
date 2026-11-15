@@ -42,7 +42,7 @@ Tidak perlu mengubah `index.html`, `prompt-library.js`, atau CSS.
 
 ## Aset lokal untuk prompt
 
-Aset statis repository disimpan di `remotion/public/`. Aset pribadi dapat diunggah melalui panel Asset Manager (gambar maks. 5 MB, audio 15 MB, font 2 MB; 10 file/hari; retensi 7 hari). Pilih aset yang ingin disertakan saat render, lalu gunakan path persis yang ditampilkan melalui `staticFile('assets/tanggal/id-file.ext')`. `Audio` memakai path lokal yang sama; font memakai `@font-face` dan `staticFile()`. URL gambar eksternal hanya boleh dipakai lewat `<Img>` dari `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, HTTPS, URL literal, dan `onError` dengan fallback geometri/SVG. `fetch`, URL audio/video, dan elemen `<img>` dilarang.
+Aset statis repository disimpan di `remotion/public/`. Aset pribadi dapat diunggah melalui panel Asset Manager (gambar maks. 5 MB, audio 15 MB, font 2 MB; 10 file/hari; retensi 7 hari). Pilih aset yang ingin disertakan saat render, lalu gunakan path persis yang ditampilkan melalui `staticFile('assets/tanggal/id-file.ext')`. `Audio` memakai path lokal yang sama; font memakai `@font-face` dan `staticFile()`. URL gambar eksternal hanya boleh dipakai lewat `<Img>` dari `images.unsplash.com`, `images.pexels.com`, atau `cdn.pixabay.com`, HTTPS, URL literal, dan `onError` dengan fallback geometri/SVG. `fetch`, URL audio/video, elemen `<img>`, `<video>`, dan `OffthreadVideo` dilarang.
 
 ## Aset pribadi dan cara pakai di prompt
 
