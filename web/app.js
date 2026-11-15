@@ -12,6 +12,9 @@ const POLL_MS = 4000;
 const GIVE_UP_MS = 20 * 60 * 1000;
 const CHECK_DELAY_MS = 300;
 const MAX_ISSUES_SHOWN = 30;
+const MAX_HISTORY_SHOWN = 20;
+const REMOTE_POLL_MS = 10000;
+const CODE_DEBOUNCE_MS = 700;
 const TERMINAL = ['done', 'failed', 'cancelled', 'expired'];
 const IN_PROGRESS = ['queued', 'rendering'];
 const STATUS_LABEL = {queued: 'Antre', rendering: 'Merender', done: 'Selesai', failed: 'Gagal', cancelled: 'Dibatalkan', expired: 'Kedaluwarsa'};
@@ -20,7 +23,7 @@ const TEMPLATE_META = {
   TikTokSlides: {icon: '▤', category: 'SOCIAL VIDEO', note: 'Vertical storytelling'},
   CustomCode: {icon: '</>', category: 'DEVELOPER', note: 'Build your own motion'},
 };
-const state = {template: TEMPLATES[0], ratio: '9:16', values: {}, timer: null, currentId: null, jobs: {}};
+const state = {template: TEMPLATES[0], ratio: '9:16', values: {}, timer: null, currentId: null, jobs: {}, remote: []};
 const assetLibrary = createAssetLibrary(API_BASE);
 
 function el(tag, props = {}, children = []) {
@@ -407,7 +410,7 @@ async function startRender() {
 
 $('#render').onclick = startRender;
 
-/* ---------- history (localStorage, per browser) ---------- */
+/* ---------- history (localStorage per browser + daftar server bila kode akses diisi) ---------- */
 function loadHistory() {
   try {
     const value = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
@@ -426,6 +429,29 @@ function saveHistory(entry) {
   renderHistory();
 }
 
+function templateName(id) {
+  const found = TEMPLATES.find((t) => t.id === id);
+  return found ? found.name : id;
+}
+
+/** Gabungan riwayat lokal dan server (per id, entri lokal didahulukan), terbaru di atas. */
+function historyItems() {
+  const byId = new Map();
+  for (const item of state.remote) byId.set(item.id, item);
+  for (const item of loadHistory()) byId.set(item.id, {...byId.get(item.id), ...item});
+  return [...byId.values()].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, MAX_HISTORY_SHOWN);
+}
+
+function setHistoryMode(mode) {
+  const badge = document.querySelector('.history-count');
+  const hint = document.querySelector('.history-heading p');
+  if (badge) badge.textContent = mode === 'synced' ? 'SERVER SYNC' : 'LOCAL HISTORY';
+  if (!hint) return;
+  if (mode === 'synced') hint.textContent = 'Render terbaru dari server, termasuk yang dibuat lewat MCP atau perangkat lain.';
+  else if (mode === 'denied') hint.textContent = 'Kode akses salah, jadi hanya riwayat browser ini yang tampil.';
+  else hint.textContent = 'Video yang pernah Anda proses di browser ini. Masukkan kode akses untuk memuat juga render dari server.';
+}
+
 async function refreshHistory() {
   await Promise.all(loadHistory().map(async (item) => {
     const known = state.jobs[item.id];
@@ -441,10 +467,49 @@ async function refreshHistory() {
   renderHistory();
 }
 
+let remoteTimer = null;
+
+/** Muat daftar job dari server (GET /api/jobs, butuh kode akses). Selama ada job berjalan, diulang tiap beberapa detik. */
+async function loadRemoteHistory() {
+  clearTimeout(remoteTimer);
+  const accessCode = ($('#accessCode').value || assetLibrary.getAccessCode() || '').trim();
+  if (!accessCode) {
+    state.remote = [];
+    setHistoryMode('local');
+    renderHistory();
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/jobs?limit=${MAX_HISTORY_SHOWN}`, {headers: {'X-Access-Code': accessCode}});
+    if (res.status === 401) {
+      state.remote = [];
+      setHistoryMode('denied');
+      renderHistory();
+      return;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const jobs = Array.isArray(data.jobs) ? data.jobs.filter((job) => job && typeof job.id === 'string') : [];
+    state.remote = jobs.map((job) => ({id: job.id, template: templateName(job.template), ratio: job.ratio, at: Date.parse(job.createdAt) || 0}));
+    for (const job of jobs) {
+      const known = state.jobs[job.id];
+      if (known && TERMINAL.includes(known.status)) continue;
+      state.jobs[job.id] = job;
+    }
+    setHistoryMode('synced');
+    renderHistory();
+    if (jobs.some((job) => IN_PROGRESS.includes(state.jobs[job.id].status))) {
+      remoteTimer = setTimeout(loadRemoteHistory, REMOTE_POLL_MS);
+    }
+  } catch {
+    /* offline atau server error: biarkan tampilan terakhir */
+  }
+}
+
 function renderHistory() {
   const list = $('#history');
   list.replaceChildren();
-  const items = loadHistory();
+  const items = historyItems();
   if (items.length === 0) {
     list.append(el('li', {textContent: 'Belum ada render. Video yang selesai akan muncul di sini.'}));
     return;
@@ -486,6 +551,18 @@ function renderHistory() {
   }
 }
 
+/* Kode akses diisi atau diubah (di Asset Manager atau di editor kode): muat ulang riwayat server. */
+let codeTimer = null;
+const onAccessCodeChange = () => {
+  clearTimeout(codeTimer);
+  codeTimer = setTimeout(loadRemoteHistory, CODE_DEBOUNCE_MS);
+};
+$('#accessCode').addEventListener('input', onAccessCodeChange);
+const assetCodeInput = $('#assetAccessCode');
+if (assetCodeInput) assetCodeInput.addEventListener('input', onAccessCodeChange);
+
 selectTemplate(TEMPLATES[0]);
+setHistoryMode('local');
 renderHistory();
 refreshHistory();
+loadRemoteHistory();

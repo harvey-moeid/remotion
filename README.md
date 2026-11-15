@@ -24,6 +24,8 @@ UI melakukan polling `GET /api/jobs/:id` sampai status `done`, lalu menampilkan 
 
 **Unduh langsung di riwayat.** Item riwayat berstatus `done` punya tombol **Unduh** yang membuka `/files/<id>.mp4?download=1` (header `Content-Disposition: attachment`), jadi tidak perlu membuka job dulu. Status tiap item diambil saat halaman dimuat (`refreshHistory`); status akhir (`done`, `failed`, `cancelled`, `expired`) di-cache dan tidak diambil ulang.
 
+**Riwayat dari server.** Riwayat lokal (`localStorage`) hanya berisi render yang dimulai dari browser itu. Supaya render dari MCP atau perangkat lain ikut tampil, Worker menyediakan `GET /api/jobs?limit=N` (maks. 100, bawaan 30) yang dilindungi `X-Access-Code`. Daftar dibaca dari metadata kunci KV `job:<id>` (status, template, rasio, waktu, thumbnail, ukuran) yang diperbarui `saveJob` pada setiap perubahan job, jadi satu operasi `list` cukup tanpa membaca tiap job dan tanpa write KV tambahan. Job yang ditulis sebelum metadata ada dibaca satu per satu (maks. 40) dan hilang dari kasus ini dalam 7 hari. Di web, riwayat server dimuat begitu kode akses terisi (kolom Asset Manager atau kolom kode kustom, juga dari `sessionStorage`), digabung dengan riwayat lokal per id, maksimal 20 item. Selama ada job berjalan, daftar dimuat ulang tiap 10 detik. Tanpa kode akses (atau kode salah) halaman tetap memakai riwayat lokal saja. Endpoint ini tidak publik karena membuka id job, dan id yang tak bisa ditebak adalah pengaman `GET /api/jobs/:id` dan `POST /api/jobs/:id/cancel`.
+
 **Batal render.** Tombol **Batal render** muncul di panel Render selama job `queued`/`rendering`, dan tombol **Batal** ada di item riwayat yang masih berjalan. Alurnya:
 
 1. UI memanggil `POST /api/jobs/:id/cancel`.
@@ -38,6 +40,7 @@ Catatan: `DISPATCH_TOKEN` sudah punya izin **Actions: Read and write**, cukup un
 | Endpoint | Auth | Fungsi |
 | --- | --- | --- |
 | `POST /api/render` | `X-Access-Code` untuk CustomCode/aset; `body.accessCode` tetap didukung untuk kompatibilitas | Buat job + picu workflow |
+| `GET /api/jobs` | `X-Access-Code` | Daftar job terbaru untuk riwayat (`limit` maks. 100) |
 | `GET /api/jobs/:id` | publik | Status job (`videoUrl`, `thumbUrl`) |
 | `POST /api/jobs/:id/cancel` | publik (id UUID tak bisa ditebak) | Batalkan job antre/berjalan |
 | `POST /api/jobs/:id/status` | Bearer `UPLOAD_TOKEN` | Workflow lapor `rendering`/`failed` (409 bila dibatalkan) |
@@ -164,7 +167,7 @@ cd worker && npm install && npx wrangler dev   # Worker lokal (butuh .dev.vars)
 
 - **GitHub Actions**: repo private dapat 2.000 menit/bulan (Linux). Satu render 5-10 detik makan sekitar 2-4 menit, jadi kira-kira 500-1.000 render/bulan. Repo public tidak dibatasi menit. Thumbnail menambah beberapa detik per render. Pengecekan di browser mencegah menit terbuang untuk kode yang pasti gagal.
 - **Workers Free**: 100.000 request/hari, CPU 10 ms/request, body request maks 100 MB (upload dibatasi 90 MB).
-- **KV Free**: 1.000 write/hari. Satu render memakai sekitar 5-6 write (thumbnail menambah satu, pembatalan satu), jadi batas praktis sekitar 170 render/hari. Worker membatasi `MAX_RENDERS_PER_DAY` (default 50).
+- **KV Free**: 1.000 write/hari. Satu render memakai sekitar 5-6 write (thumbnail menambah satu, pembatalan satu), jadi batas praktis sekitar 170 render/hari. Worker membatasi `MAX_RENDERS_PER_DAY` (default 50). Riwayat server memakai operasi `list` (batas free 1.000/hari): satu per pemuatan halaman atau perubahan kode akses, ditambah satu per 10 detik selama ada job berjalan.
 - **R2 Free**: 10 GB penyimpanan, 1 juta operasi kelas A dan 10 juta kelas B per bulan. Cron harian menghapus MP4, thumbnail, aset, dan marker kuota yang lebih tua dari `RETENTION_DAYS` (default 7 hari). Setiap upload aset memakai 2 operasi tulis R2 (slot kuota + file); batas 10/hari berarti maksimum sekitar 20 operasi tulis/hari. Preview/daftar memakai operasi baca/list; setiap render hanya mengunduh aset yang dipilih.
 - **Workers Free**: endpoint upload/list/signed-read memakai request Worker; CPU tetap tunduk pada batas 10 ms/request. Upload membatasi ukuran file sebelum penyimpanan dan memeriksa signature MIME. Tidak ada D1/KV namespace atau bucket baru.
 - **Pages Free**: 500 build/bulan (di sini deploy lewat wrangler dari Actions, jadi tidak memakai build Pages).
