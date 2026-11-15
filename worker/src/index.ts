@@ -197,8 +197,9 @@ app.post('/api/render', async (c) => {
   if (body.assets !== undefined && !Array.isArray(body.assets)) return c.json({error: 'assets harus berupa array path aset'}, 400);
   const assetKeys = Array.isArray(body.assets) ? body.assets : [];
   if (assetKeys.length > MAX_ASSET_SELECTIONS || assetKeys.some((key) => typeof key !== 'string' || !ASSET_KEY_RE.test(key))) return c.json({error: 'Daftar aset tidak valid (maksimal 20 file)'}, 400);
-  const renderAssetCode = typeof body.accessCode === 'string' ? body.accessCode : '';
-  if (assetKeys.length > 0 && (!c.env.ACCESS_CODE || !(await safeEqual(renderAssetCode, c.env.ACCESS_CODE)))) return c.json({error: 'Kode akses diperlukan untuk memakai aset pribadi'}, 401);
+  // Prefer the header for MCP/API clients; retain body.accessCode for backward compatibility with the existing web UI.
+  const renderAccessCode = c.req.header('x-access-code') || (typeof body.accessCode === 'string' ? body.accessCode : '');
+  if (assetKeys.length > 0 && (!c.env.ACCESS_CODE || !(await safeEqual(renderAccessCode, c.env.ACCESS_CODE)))) return c.json({error: 'Kode akses diperlukan untuk memakai aset pribadi'}, 401);
   const uniqueAssetKeys = [...new Set(assetKeys as string[])];
   const assetObjects = await Promise.all(uniqueAssetKeys.map((key) => c.env.RENDERS.head(key)));
   if (assetObjects.some((obj) => !obj || !obj.customMetadata?.assetType)) return c.json({error: 'Satu atau lebih aset tidak ditemukan atau tidak valid'}, 400);
@@ -215,7 +216,7 @@ app.post('/api/render', async (c) => {
     if (!c.env.ACCESS_CODE) {
       return c.json({error: 'Fitur kode kustom belum aktif (secret ACCESS_CODE belum diisi)'}, 403);
     }
-    if (typeof body.accessCode !== 'string' || !(await safeEqual(body.accessCode, c.env.ACCESS_CODE))) {
+    if (!renderAccessCode || !(await safeEqual(renderAccessCode, c.env.ACCESS_CODE))) {
       return c.json({error: 'Kode akses salah'}, 401);
     }
     if (typeof body.code !== 'string' || body.code.trim() === '') {
