@@ -68,11 +68,13 @@ jobs:
         run: |
           post_code=$(curl -sS -o /tmp/asset-post.json -w '%{http_code}' -X POST "$API_URL/api/assets")
           get_code=$(curl -sS -o /tmp/asset-get.json -w '%{http_code}' "$API_URL/api/assets")
+          delete_code=$(curl -sS -o /tmp/asset-delete.json -w '%{http_code}' -X DELETE "$API_URL/api/assets/2026-11-15/00000000-0000-4000-8000-000000000000.png")
           render_code=$(curl -sS -o /tmp/asset-render.json -w '%{http_code}' -X POST "$API_URL/api/render" -H 'Content-Type: application/json' -d '{"template":"KineticTitle","ratio":"9:16","props":{},"assets":["assets/2026-11-15/00000000-0000-4000-8000-000000000000.png"],"accessCode":"invalid-test-code"}')
           [ "$post_code" = "401" ] || { cat /tmp/asset-post.json; echo "::error::POST /api/assets should reject without code (got $post_code)"; exit 1; }
           [ "$get_code" = "401" ] || { cat /tmp/asset-get.json; echo "::error::GET /api/assets should reject without code (got $get_code)"; exit 1; }
+          [ "$delete_code" = "401" ] || { cat /tmp/asset-delete.json; echo "::error::DELETE /api/assets should reject without code (got $delete_code)"; exit 1; }
           [ "$render_code" = "401" ] || { cat /tmp/asset-render.json; echo "::error::Render with invalid asset code should reject (got $render_code)"; exit 1; }
-          echo 'Asset upload/list/render endpoints reject unauthenticated requests as expected.'
+          echo 'Asset upload/list/delete/render endpoints reject unauthenticated requests as expected.'
 
   pages:
     runs-on: ubuntu-latest
