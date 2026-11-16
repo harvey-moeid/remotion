@@ -429,6 +429,49 @@ function saveHistory(entry) {
   renderHistory();
 }
 
+function currentAccessCode() {
+  return ($('#accessCode').value || assetLibrary.getAccessCode() || '').trim();
+}
+
+/** Lupakan job di sisi klien: riwayat lokal, daftar server di memori, dan tampilan hasil bila sedang dibuka. */
+function forgetJob(id) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(loadHistory().filter((item) => item.id !== id)));
+  } catch {
+    /* storage tidak tersedia: abaikan */
+  }
+  state.remote = state.remote.filter((item) => item.id !== id);
+  delete state.jobs[id];
+  if (state.currentId === id) {
+    stopPolling();
+    state.currentId = null;
+    clearResult();
+    $('#steps').hidden = true;
+  }
+}
+
+async function deleteJob(item) {
+  const accessCode = currentAccessCode();
+  const note = accessCode
+    ? 'Video dan thumbnail di server ikut dihapus.'
+    : 'Hanya dihapus dari riwayat browser ini. Isi kode akses untuk menghapus dari server juga.';
+  if (!window.confirm(`Hapus "${item.template} · ${item.ratio}"? ${note}`)) return;
+  if (accessCode) {
+    try {
+      const res = await fetch(`${API_BASE}/api/jobs/${encodeURIComponent(item.id)}`, {method: 'DELETE', headers: {'X-Access-Code': accessCode}});
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) return showMessage('Kode akses salah, render tidak dihapus.');
+      if (res.status === 409) return showMessage(data.error || 'Render masih berjalan, batalkan dulu.');
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    } catch (error) {
+      return showMessage(`Gagal menghapus: ${error.message}`);
+    }
+  }
+  forgetJob(item.id);
+  renderHistory();
+  showMessage(accessCode ? 'Render dihapus.' : 'Dihapus dari riwayat browser ini.');
+}
+
 function templateName(id) {
   const found = TEMPLATES.find((t) => t.id === id);
   return found ? found.name : id;
@@ -472,7 +515,7 @@ let remoteTimer = null;
 /** Muat daftar job dari server (GET /api/jobs, butuh kode akses). Selama ada job berjalan, diulang tiap beberapa detik. */
 async function loadRemoteHistory() {
   clearTimeout(remoteTimer);
-  const accessCode = ($('#accessCode').value || assetLibrary.getAccessCode() || '').trim();
+  const accessCode = currentAccessCode();
   if (!accessCode) {
     state.remote = [];
     setHistoryMode('local');
@@ -547,6 +590,9 @@ function renderHistory() {
     }
     if (IN_PROGRESS.includes(status)) {
       actions.append(el('button', {type: 'button', className: 'btn small cancel', textContent: 'Batal', onclick: () => cancelJob(item.id)}));
+    }
+    if (!IN_PROGRESS.includes(status)) {
+      actions.append(el('button', {type: 'button', className: 'btn small cancel', textContent: 'Hapus', onclick: () => deleteJob(item)}));
     }
     list.append(el('li', {}, [thumb, info, actions]));
   }

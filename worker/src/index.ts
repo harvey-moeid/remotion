@@ -139,7 +139,7 @@ app.use('*', async (c, next) => {
   if (origin && allowed.includes(origin)) {
     c.header('Access-Control-Allow-Origin', origin);
     c.header('Vary', 'Origin');
-    c.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    c.header('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
     c.header('Access-Control-Allow-Headers', 'Content-Type, X-Access-Code');
   }
   if (c.req.method === 'OPTIONS') {
@@ -361,6 +361,27 @@ app.get('/api/jobs', async (c) => {
   items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   c.header('Cache-Control', 'no-store');
   return c.json({jobs: items.slice(0, limit)});
+});
+
+// 1c) Hapus job beserta video, thumbnail, dan kode kustomnya. Hanya pemilik (X-Access-Code).
+// Job yang masih antre/berjalan harus dibatalkan dulu agar run GitHub Actions tidak melapor ke job yang hilang.
+app.delete('/api/jobs/:id', async (c) => {
+  if (!(await requireAccessCode(c))) {
+    return c.json({error: 'Kode akses salah atau belum dikonfigurasi'}, 401);
+  }
+  const id = c.req.param('id');
+  if (!UUID_RE.test(id)) {
+    return c.json({error: 'id tidak valid'}, 400);
+  }
+  const job = await getJob(c.env, id);
+  if (job && (job.status === 'queued' || job.status === 'rendering')) {
+    return c.json({error: 'job masih berjalan, batalkan dulu sebelum menghapus', status: job.status}, 409);
+  }
+  // Tetap bersihkan R2 walau entri KV sudah kedaluwarsa (file bisa tersisa sampai cron harian).
+  await c.env.RENDERS.delete([objectKey(id), thumbKey(id)]);
+  await c.env.JOBS.delete(codeKey(id));
+  await c.env.JOBS.delete(`job:${id}`);
+  return c.json({ok: true, id});
 });
 
 // 2) UI polling status job.
