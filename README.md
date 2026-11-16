@@ -18,9 +18,19 @@ R2: assets/<tanggal>/<uuid>.<ext> --> signed GET /assets/... (hanya untuk previe
 
 UI melakukan polling `GET /api/jobs/:id` sampai status `done`, lalu menampilkan pemutar dan link unduh.
 
+## Penghapusan manual (tanpa cron)
+
+Tidak ada cron atau pembersihan otomatis. File di R2 (MP4, thumbnail, aset) tersimpan sampai dihapus sendiri:
+
+- **Render**: tombol **Hapus** di item riwayat (butuh kode akses agar file di server ikut terhapus) atau `DELETE /api/jobs/:id` dengan header `X-Access-Code`. Video, thumbnail, dan kode kustom dihapus bersama entri job. Job yang masih berjalan harus dibatalkan dulu (HTTP 409).
+- **Aset**: tombol **Hapus** pada kartu aset di Asset Manager atau `DELETE /api/assets/:date/:name` dengan header `X-Access-Code`. Slot upload harian tidak dikembalikan.
+- Entri status job di KV tetap kedaluwarsa sendiri setelah 7 hari (TTL KV, bukan cron), tetapi file R2-nya tidak. Hapus render lewat tombol **Hapus** sebelum entri KV hilang, supaya tidak ada file yatim. Bila terlanjur, `DELETE /api/jobs/:id` tetap membersihkan R2 walau entri KV sudah tidak ada (id masih tercatat di URL video).
+- Marker kuota upload (`asset-quota/<tanggal>/NN`, maksimal 10 objek kecil per hari) tidak dihapus; ukurannya diabaikan.
+- Pantau pemakaian R2 (batas free 10 GB) lewat dashboard Cloudflare.
+
 ## Thumbnail, unduh di riwayat, dan batal render
 
-**Thumbnail.** `render.yml` merender satu frame diam (`remotion still`, frame 30, cadangan frame 0, skala 0.4, JPEG) lalu mengunggahnya ke `PUT /upload-thumb` SEBELUM video, jadi thumbnail sudah ada saat status berubah menjadi `done`. Langkah ini tidak fatal: kalau gagal, video tetap dirender dan riwayat memakai kotak placeholder. Thumbnail ditampilkan di riwayat dan jadi `poster` pemutar. Field `thumbUrl` ada di respons `GET /api/jobs/:id` (null bila belum ada). Batas ukuran thumbnail 2 MB; dibersihkan cron bersama MP4 (prefix `thumbs/`).
+**Thumbnail.** `render.yml` merender satu frame diam (`remotion still`, frame 30, cadangan frame 0, skala 0.4, JPEG) lalu mengunggahnya ke `PUT /upload-thumb` SEBELUM video, jadi thumbnail sudah ada saat status berubah menjadi `done`. Langkah ini tidak fatal: kalau gagal, video tetap dirender dan riwayat memakai kotak placeholder. Thumbnail ditampilkan di riwayat dan jadi `poster` pemutar. Field `thumbUrl` ada di respons `GET /api/jobs/:id` (null bila belum ada). Batas ukuran thumbnail 2 MB; dihapus bersama videonya lewat tombol **Hapus** (lihat bagian penghapusan manual).
 
 **Unduh langsung di riwayat.** Item riwayat berstatus `done` punya tombol **Unduh** yang membuka `/files/<id>.mp4?download=1` (header `Content-Disposition: attachment`), jadi tidak perlu membuka job dulu. Status tiap item diambil saat halaman dimuat (`refreshHistory`); status akhir (`done`, `failed`, `cancelled`, `expired`) di-cache dan tidak diambil ulang.
 
@@ -43,6 +53,7 @@ Catatan: `DISPATCH_TOKEN` sudah punya izin **Actions: Read and write**, cukup un
 | `GET /api/jobs` | `X-Access-Code` | Daftar job terbaru untuk riwayat (`limit` maks. 100) |
 | `GET /api/jobs/:id` | publik | Status job (`videoUrl`, `thumbUrl`) |
 | `POST /api/jobs/:id/cancel` | publik (id UUID tak bisa ditebak) | Batalkan job antre/berjalan |
+| `DELETE /api/jobs/:id` | `X-Access-Code` | Hapus job + video + thumbnail + kode kustom (409 bila masih berjalan) |
 | `POST /api/jobs/:id/status` | Bearer `UPLOAD_TOKEN` | Workflow lapor `rendering`/`failed` (409 bila dibatalkan) |
 | `PUT /upload` | Bearer `UPLOAD_TOKEN` | Unggah MP4 |
 | `PUT /upload-thumb` | Bearer `UPLOAD_TOKEN` | Unggah thumbnail JPEG |
@@ -50,6 +61,7 @@ Catatan: `DISPATCH_TOKEN` sudah punya izin **Actions: Read and write**, cukup un
 | `GET /thumbs/:id.jpg` | publik | Sajikan thumbnail |
 | `POST /api/assets` | `X-Access-Code` | Upload aset pribadi ke R2 |
 | `GET /api/assets` | `X-Access-Code` | Daftar aset + URL preview sementara |
+| `DELETE /api/assets/:date/:name` | `X-Access-Code` | Hapus satu aset pribadi dari R2 |
 | `GET /assets/:date/:name` | signed HMAC (6 jam) | Unduh aset sementara untuk preview/render |
 
 ## Asset Manager (Tahap 3)
@@ -59,7 +71,7 @@ Panel **Library aset pribadi** memakai secret Worker `ACCESS_CODE` yang sama den
 - Jenis yang diterima: gambar PNG/JPEG/WebP maks. **5 MB**; audio MP3/WAV/OGG/AAC maks. **15 MB**; font WOFF/WOFF2/TTF/OTF maks. **2 MB**. Video dan SVG upload tidak diterima.
 - Maksimum **10 upload per hari WIB (Asia/Jakarta)**. Slot kuota dibuat dengan conditional R2 write (`etagDoesNotMatch: '*'`) agar dua upload bersamaan tidak memakai slot yang sama. Tidak perlu KV write untuk penghitung upload.
 - Nama objek dibuat UUID; nama asli hanya disimpan sebagai metadata. Signature file diperiksa sebelum disimpan.
-- Aset disimpan pada bucket R2 `remotion-renders`, prefix `assets/`, tanpa membuat bucket baru. Cron yang sama menghapus aset dan marker kuota setelah `RETENTION_DAYS` (default 7 hari).
+- Aset disimpan pada bucket R2 `remotion-renders`, prefix `assets/`, tanpa membuat bucket baru. Tidak ada cron: aset tersimpan sampai dihapus lewat tombol **Hapus** pada kartu aset (`DELETE /api/assets/:date/:name`). Marker kuota harian (`asset-quota/`) berukuran kecil dan tidak ikut terhapus.
 - Daftar aset hanya bisa dibaca dengan kode akses. Preview dan pengunduhan runner memakai URL HMAC bertanda tangan, berlaku maksimal 6 jam. `UPLOAD_TOKEN` tidak diberikan ke langkah pengunduhan aset.
 - Pilih aset yang akan dipakai sebelum render. Untuk template Judul Kinetik, salin path `assets/tanggal/uuid.ext` ke field **File logo di public/**. Untuk kode kustom gunakan `Img`, `Audio`, atau `@font-face` dengan `staticFile('assets/tanggal/uuid.ext')`. Path upload dicantumkan ke input workflow dan diunduh ke `remotion/public/assets/` sebelum thumbnail/MP4.
 
@@ -121,7 +133,7 @@ Frontend bisa dipasang di layar utama / desktop dan kerangkanya tetap terbuka sa
 | Folder | Isi |
 | --- | --- |
 | `remotion/` | Komposisi Remotion (`KineticTitle`, `TikTokSlides`), aset tetap di `public/`, 1080x1920 dan 1920x1080 |
-| `worker/` | Cloudflare Worker (Hono): API, upload, penyajian MP4 + thumbnail, pembatalan, cron pembersihan |
+| `worker/` | Cloudflare Worker (Hono): API, upload, penyajian MP4 + thumbnail, pembatalan, penghapusan manual render/aset |
 | `web/` | Frontend statis (HTML + JS murni) untuk Cloudflare Pages: `app.js`, `asset-library.js`, `editor.js`, `lexer.js`, `code-rules.js`, `code-check.js`, `templates.js`, plus berkas PWA (`sw.js`, `pwa.js`, `manifest.webmanifest`, `icons/`) |
 | `scripts/` | Skrip bantu (pembuat ikon PWA) |
 | `.github/workflows/` | `render.yml` (render video + thumbnail) dan `deploy.yml` (deploy Worker + Pages) |
@@ -168,7 +180,7 @@ cd worker && npm install && npx wrangler dev   # Worker lokal (butuh .dev.vars)
 - **GitHub Actions**: repo private dapat 2.000 menit/bulan (Linux). Satu render 5-10 detik makan sekitar 2-4 menit, jadi kira-kira 500-1.000 render/bulan. Repo public tidak dibatasi menit. Thumbnail menambah beberapa detik per render. Pengecekan di browser mencegah menit terbuang untuk kode yang pasti gagal.
 - **Workers Free**: 100.000 request/hari, CPU 10 ms/request, body request maks 100 MB (upload dibatasi 90 MB).
 - **KV Free**: 1.000 write/hari. Satu render memakai sekitar 5-6 write (thumbnail menambah satu, pembatalan satu), jadi batas praktis sekitar 170 render/hari. Worker membatasi `MAX_RENDERS_PER_DAY` (default 50). Riwayat server memakai operasi `list` (batas free 1.000/hari): satu per pemuatan halaman atau perubahan kode akses, ditambah satu per 10 detik selama ada job berjalan.
-- **R2 Free**: 10 GB penyimpanan, 1 juta operasi kelas A dan 10 juta kelas B per bulan. Cron harian menghapus MP4, thumbnail, aset, dan marker kuota yang lebih tua dari `RETENTION_DAYS` (default 7 hari). Setiap upload aset memakai 2 operasi tulis R2 (slot kuota + file); batas 10/hari berarti maksimum sekitar 20 operasi tulis/hari. Preview/daftar memakai operasi baca/list; setiap render hanya mengunduh aset yang dipilih.
+- **R2 Free**: 10 GB penyimpanan, 1 juta operasi kelas A dan 10 juta kelas B per bulan. Tidak ada pembersihan otomatis, jadi hapus render dan aset yang tidak dipakai lewat tombol **Hapus** agar penyimpanan tetap di bawah 10 GB. Setiap upload aset memakai 2 operasi tulis R2 (slot kuota + file); batas 10/hari berarti maksimum sekitar 20 operasi tulis/hari. Preview/daftar memakai operasi baca/list; setiap render hanya mengunduh aset yang dipilih.
 - **Workers Free**: endpoint upload/list/signed-read memakai request Worker; CPU tetap tunduk pada batas 10 ms/request. Upload membatasi ukuran file sebelum penyimpanan dan memeriksa signature MIME. Tidak ada D1/KV namespace atau bucket baru.
 - **Pages Free**: 500 build/bulan (di sini deploy lewat wrangler dari Actions, jadi tidak memakai build Pages).
 - Endpoint /api/render dan /api/jobs/:id/cancel bersifat publik. Siapa pun yang tahu URL-nya bisa memicu render; kuota harian adalah pengamannya. Tambahkan Cloudflare Access atau kode akses jika perlu.
