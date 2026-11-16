@@ -94,7 +94,12 @@ export function createAssetLibrary(apiBase) {
           message('Clipboard tidak tersedia. Salin path yang tampil di kartu aset.');
         }
       });
-      actions.append(copy);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'btn small cancel';
+      remove.textContent = 'Hapus';
+      remove.addEventListener('click', () => deleteAsset(asset, remove));
+      actions.append(copy, remove);
       details.append(name, meta, path, actions);
       item.append(select, preview, details);
       list.append(item);
@@ -112,13 +117,33 @@ export function createAssetLibrary(apiBase) {
       const valid = new Set(state.assets.map((asset) => asset.path));
       state.selected = new Set([...state.selected].filter((path) => valid.has(path)));
       render();
-      message(`${state.assets.length} aset tersedia · pilih aset yang ingin disertakan pada render. Batas 10 upload/hari; file tersimpan ${data.retentionDays || 7} hari.`, 'success');
+      message(`${state.assets.length} aset tersedia · pilih aset yang ingin disertakan pada render. Batas 10 upload/hari; aset tersimpan sampai Anda menghapusnya.`, 'success');
     } catch (error) {
       state.assets = [];
       render();
       message(error.message, 'error');
     } finally {
       refreshButton.disabled = false;
+    }
+  }
+
+  /** Hapus satu aset dari server (manual, tidak ada pembersihan otomatis). */
+  async function deleteAsset(asset, button) {
+    if (!getAccessCode()) return message('Masukkan kode akses pemilik terlebih dahulu.', 'error');
+    if (!window.confirm(`Hapus aset "${asset.name}"? Render yang memakai path ini akan gagal. Slot upload harian tidak dikembalikan.`)) return;
+    button.disabled = true;
+    try {
+      const suffix = asset.path.replace(/^assets\//, '').split('/').map(encodeURIComponent).join('/');
+      const response = await fetch(`${apiBase}/api/assets/${suffix}`, {method: 'DELETE', headers: {'X-Access-Code': getAccessCode()}});
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401) throw new Error('Kode akses salah, aset tidak dihapus.');
+      if (!response.ok && response.status !== 404) throw new Error(data.error || `HTTP ${response.status}`);
+      state.selected.delete(asset.path);
+      await refresh();
+      message(`Aset ${asset.name} dihapus.`, 'success');
+    } catch (error) {
+      button.disabled = false;
+      message(error.message, 'error');
     }
   }
 

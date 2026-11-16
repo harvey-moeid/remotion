@@ -15,7 +15,6 @@ type Bindings = {
   WORKFLOW_FILE: string;
   ALLOWED_ORIGINS: string;
   MAX_RENDERS_PER_DAY: string;
-  RETENTION_DAYS: string;
 };
 
 type Ctx = Context<{Bindings: Bindings}>;
@@ -54,7 +53,6 @@ const RATIOS = ['9:16', '16:9'];
 const MAX_UPLOAD_BYTES = 90 * 1024 * 1024;
 const MAX_THUMB_BYTES = 2 * 1024 * 1024;
 const MAX_ASSET_SELECTIONS = 20;
-const ASSET_RETENTION_PREFIXES = ['renders/', 'thumbs/', 'assets/', 'asset-quota/'];
 const JOB_TTL_SECONDS = 7 * 24 * 3600;
 // Job lama (disimpan sebelum metadata ada) dibaca satu per satu; dibatasi agar total subrequest tetap di bawah 50.
 const MAX_LEGACY_JOB_READS = 40;
@@ -364,6 +362,7 @@ app.get('/api/jobs', async (c) => {
 });
 
 // 1c) Hapus job beserta video, thumbnail, dan kode kustomnya. Hanya pemilik (X-Access-Code).
+// Ini satu-satunya cara membersihkan R2 (tidak ada cron): hapus render yang tidak dipakai lagi.
 // Job yang masih antre/berjalan harus dibatalkan dulu agar run GitHub Actions tidak melapor ke job yang hilang.
 app.delete('/api/jobs/:id', async (c) => {
   if (!(await requireAccessCode(c))) {
@@ -377,7 +376,7 @@ app.delete('/api/jobs/:id', async (c) => {
   if (job && (job.status === 'queued' || job.status === 'rendering')) {
     return c.json({error: 'job masih berjalan, batalkan dulu sebelum menghapus', status: job.status}, 409);
   }
-  // Tetap bersihkan R2 walau entri KV sudah kedaluwarsa (file bisa tersisa sampai cron harian).
+  // Tetap bersihkan R2 walau entri KV sudah kedaluwarsa (file R2 tidak punya masa kedaluwarsa otomatis).
   await c.env.RENDERS.delete([objectKey(id), thumbKey(id)]);
   await c.env.JOBS.delete(codeKey(id));
   await c.env.JOBS.delete(`job:${id}`);
@@ -619,7 +618,19 @@ app.get('/api/assets', async (c) => {
     return {path: obj.key, staticPath: signed.path, name: obj.customMetadata?.originalName ?? obj.key.split('/').pop(), type: obj.customMetadata?.assetType ?? 'unknown', contentType: obj.httpMetadata?.contentType ?? 'application/octet-stream', size: obj.size, uploadedAt: obj.customMetadata?.uploadedAt ?? obj.uploaded.toISOString(), previewUrl: signed.url};
   }));
   assets.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
-  return c.json({assets, uploadLimit: 10, retentionDays: Number(c.env.RETENTION_DAYS || 7)});
+  return c.json({assets, uploadLimit: 10});
+});
+
+// Hapus satu aset pribadi secara manual (tidak ada cron). Hanya pemilik (X-Access-Code).
+// Slot kuota upload harian tidak dikembalikan; marker kecil di asset-quota/ dibiarkan.
+app.delete('/api/assets/:date/:name', async (c) => {
+  if (!(await requireAccessCode(c))) return c.json({error: 'Kode akses salah atau belum dikonfigurasi'}, 401);
+  const key = 'assets/' + c.req.param('date') + '/' + c.req.param('name');
+  if (!ASSET_KEY_RE.test(key)) return c.json({error: 'path aset tidak valid'}, 400);
+  const head = await c.env.RENDERS.head(key);
+  if (!head || !head.customMetadata?.assetType) return c.json({error: 'aset tidak ditemukan'}, 404);
+  await c.env.RENDERS.delete(key);
+  return c.json({ok: true, path: key});
 });
 
 // URL baca bertanda tangan HMAC, berlaku maksimal 6 jam; tidak memakai UPLOAD_TOKEN.
@@ -721,26 +732,7 @@ app.onError((err, c) => {
   return c.json({error: 'kesalahan internal'}, 500);
 });
 
-// Cron harian: hapus MP4 dan thumbnail yang melewati masa simpan agar R2 tetap di bawah kuota gratis.
-async function cleanup(env: Bindings): Promise<void> {
-  const days = Number(env.RETENTION_DAYS || 7);
-  const cutoff = Date.now() - days * 24 * 3600 * 1000;
-  for (const prefix of ASSET_RETENTION_PREFIXES) {
-    let cursor: string | undefined;
-    do {
-      const list = await env.RENDERS.list({prefix, cursor, limit: 500});
-      const old = list.objects.filter((o) => o.uploaded.getTime() < cutoff).map((o) => o.key);
-      if (old.length > 0) {
-        await env.RENDERS.delete(old);
-      }
-      cursor = list.truncated ? list.cursor : undefined;
-    } while (cursor);
-  }
-}
-
+// Tanpa handler `scheduled`: pembersihan R2 sepenuhnya manual (lihat DELETE /api/jobs/:id dan DELETE /api/assets/:date/:name).
 export default {
   fetch: app.fetch,
-  scheduled(_event: ScheduledController, env: Bindings, ctx: ExecutionContext) {
-    ctx.waitUntil(cleanup(env));
-  },
 };

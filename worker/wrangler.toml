@@ -10,7 +10,6 @@ GH_REF = 'main'
 WORKFLOW_FILE = 'render.yml'
 ALLOWED_ORIGINS = 'https://remotion-studio.pages.dev,https://remotion.muidsoft.com'
 MAX_RENDERS_PER_DAY = '50'
-RETENTION_DAYS = '7'
 
 [[kv_namespaces]]
 binding = 'JOBS'
@@ -20,7 +19,7 @@ id = 'cbb8dcbea2004c379ff65b37a36089f2'
 binding = 'RENDERS'
 bucket_name = 'remotion-renders'
 
-[triggers]
-crons = ['0 3 * * *']
+# Tidak ada cron: video, thumbnail, dan aset dihapus manual lewat tombol Hapus di web
+# (DELETE /api/jobs/:id dan DELETE /api/assets/:date/:name, keduanya butuh X-Access-Code).
 
 # Secret (diisi oleh deploy.yml dari GitHub Actions secrets): UPLOAD_TOKEN, DISPATCH_TOKEN
